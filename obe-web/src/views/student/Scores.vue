@@ -35,7 +35,7 @@
         <el-table-column label="达成度" min-width="160">
           <template #default="{ row }">
             <div class="progress-cell">
-              <el-progress :percentage="Math.round((row.achievement || 0) * 1000) / 10" :stroke-width="14" :color="row.achievement >= 0.6 ? '#67c23a' : '#f56c6c'" />
+              <el-progress :percentage="Math.round((row.achievement || 0) * 1000) / 10" :stroke-width="14" :color="row.achievement >= 0.6 ? '#67c23a' : '#f56c6c'" :show-text="false" />
               <span class="progress-text">{{ ((row.achievement || 0) * 100).toFixed(1) }}%</span>
             </div>
           </template>
