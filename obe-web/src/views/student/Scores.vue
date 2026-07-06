@@ -76,7 +76,7 @@ async function loadScores() {
       scores.value = data
       objectiveDetails.value = data.objectiveDetails || []
     }
-  } catch {}
+  } catch (e) { console.error('Failed to load scores:', e) }
 }
 </script>
 

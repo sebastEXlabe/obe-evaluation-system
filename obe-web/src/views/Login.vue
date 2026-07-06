@@ -57,7 +57,7 @@ async function doRegister() {
     ElMessage.success('注册成功，请登录')
     regVisible.value = false
     Object.assign(regForm, { username: '', password: '', realName: '' })
-  } catch {} finally { loading.value = false }
+  } catch (e) { ElMessage.error('注册失败: ' + (e?.response?.data?.message || e?.message || '未知错误')) } finally { loading.value = false }
 }
 </script>
 

@@ -268,7 +268,7 @@ const indForm = reactive({ id:null, indicatorNo:'', title:'', description:'', ob
 const methodForm = reactive({ id:null, methodName:'', weight:0.5, dataSource:'MANUAL', evalType:'SUMMATIVE', fullScore:100, indicatorId:null })
 
 onMounted(async () => {
-  try { const {data} = await http.get('/courses'); courses.value = data||[] } catch {}
+  try { const {data} = await http.get('/courses'); courses.value = data||[] } catch (e) { console.error('Failed to load courses:', e) }
   loadAll()
 })
 async function loadAll() {

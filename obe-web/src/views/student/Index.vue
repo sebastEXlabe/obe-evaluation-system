@@ -82,7 +82,7 @@ async function loadMyGroup() {
     } else {
       myGroup.value = null; members.value = []
     }
-  } catch {}
+  } catch (e) { console.error('Failed to load group:', e) }
 }
 
 async function joinByCode() {
