@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="toolbar">
-      <el-select v-model="groupId" @change="loadAnalysis" placeholder="选择小组" style="width:220px" clearable>
+      <el-select v-model="groupId" @change="loadAnalysis" placeholder="选择小组" style="width:220px" clearable filterable>
         <el-option v-for="g in groups" :key="g.id" :label="g.groupName" :value="g.id" />
       </el-select>
       <el-button type="primary" @click="calculateAchievement" :loading="loading" :disabled="!groupId">计算达成度</el-button>

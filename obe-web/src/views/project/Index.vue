@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="toolbar">
-      <el-select v-model="groupId" @change="onGroupChange" placeholder="选择小组" style="width:220px" clearable>
+      <el-select v-model="groupId" @change="onGroupChange" placeholder="选择小组" style="width:220px" clearable filterable>
         <el-option v-for="g in groups" :key="g.id" :label="g.groupName" :value="g.id" />
       </el-select>
       <el-input v-model="taskKeyword" placeholder="搜索任务..." style="width:200px" clearable v-if="activeTab==='tasks'" />

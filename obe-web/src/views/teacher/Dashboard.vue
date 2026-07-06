@@ -20,7 +20,7 @@
           <template #header>
             <div class="card-header">
               <span>📊 评价数据源</span>
-              <el-select v-model="selectedGroupId" @change="loadAll" placeholder="选择小组" size="small" style="width:180px">
+              <el-select v-model="selectedGroupId" @change="loadAll" placeholder="选择小组" size="small" style="width:180px" filterable>
                 <el-option v-for="g in groups" :key="g.id" :label="g.groupName" :value="g.id" />
               </el-select>
             </div>

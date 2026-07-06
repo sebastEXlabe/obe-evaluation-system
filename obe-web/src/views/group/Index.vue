@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="toolbar">
-      <el-select v-model="courseId" @change="loadGroups" placeholder="选择课程" style="width:220px" clearable>
+      <el-select v-model="courseId" @change="loadGroups" placeholder="选择课程" style="width:220px" clearable filterable>
         <el-option v-for="c in courses" :key="c.id" :label="c.courseName + ' (' + c.semester + ')'" :value="c.id" />
       </el-select>
       <el-input v-model="keyword" @input="loadGroups" placeholder="搜索小组名称..." style="width:200px" clearable />

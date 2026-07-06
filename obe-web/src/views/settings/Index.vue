@@ -65,7 +65,7 @@
           <div class="card-header-row">
             <span style="font-weight:bold">学生达成度查询</span>
             <div>
-              <el-select v-model="studentSearchGroupId" placeholder="选择小组" style="width:180px" clearable>
+              <el-select v-model="studentSearchGroupId" placeholder="选择小组" style="width:180px" clearable filterable>
                 <el-option v-for="g in groups" :key="g.id" :label="g.groupName" :value="g.id" />
               </el-select>
               <el-button type="primary" @click="searchStudentAchievements" style="margin-left:8px">查询</el-button>

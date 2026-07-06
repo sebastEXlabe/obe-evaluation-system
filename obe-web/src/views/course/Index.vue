@@ -4,7 +4,7 @@
     <div class="header-bar">
       <div class="cascade">
         <span class="cascade-label">课程：</span>
-        <el-select v-model="courseId" @change="loadAll" placeholder="选择课程" size="large" style="width:240px">
+        <el-select v-model="courseId" @change="loadAll" placeholder="选择课程" size="large" style="width:240px" filterable>
           <el-option v-for="c in courses" :key="c.id" :label="c.courseName" :value="c.id">
             <span>{{ c.courseName }}</span><span class="opt-extra">{{ c.semester }}</span>
           </el-option>

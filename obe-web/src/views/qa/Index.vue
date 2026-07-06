@@ -16,7 +16,7 @@
           <el-radio-button value="my" v-if="isStudent">我的提问</el-radio-button>
           <el-radio-button value="pending" v-if="isTeacher">待回答 ({{ pendingCount }})</el-radio-button>
         </el-radio-group>
-        <el-select v-model="filterGroupId" @change="loadQuestions" placeholder="按小组筛选" clearable size="small" style="width:180px;margin-left:12px">
+        <el-select v-model="filterGroupId" @change="loadQuestions" placeholder="按小组筛选" clearable size="small" style="width:180px;margin-left:12px" filterable>
           <el-option v-for="g in groups" :key="g.id" :label="g.groupName" :value="g.id" />
         </el-select>
       </div>
@@ -76,7 +76,7 @@
           <el-input v-model="askForm.title" placeholder="简明扼要描述你的问题" maxlength="100" show-word-limit />
         </el-form-item>
         <el-form-item label="所属小组">
-          <el-select v-model="askForm.groupId" placeholder="选择小组（可选）" clearable style="width:100%">
+          <el-select v-model="askForm.groupId" placeholder="选择小组（可选）" clearable style="width:100%" filterable>
             <el-option v-for="g in myGroups" :key="g.id" :label="g.groupName" :value="g.id" />
           </el-select>
         </el-form-item>
