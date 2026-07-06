@@ -109,12 +109,11 @@ public class ExportController {
                 s.getFinalScore()!=null?s.getFinalScore():0);
         }
 
-        // Summary stats
+        // Summary stats (group-specific)
         w.println();
         w.printf("导出时间,%s\n", LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-        w.printf("Git提交总数,%d\n", gitMapper.selectCount(new LambdaQueryWrapper<>()));
-        w.printf("日志总数,%d\n", journalMapper.selectCount(new LambdaQueryWrapper<>()));
-        w.printf("问答总数,%d\n", qaMapper.selectCount(new LambdaQueryWrapper<>()));
+        w.printf("Git提交总数,%d\n", gitMapper.selectCount(new LambdaQueryWrapper<com.obe.evaluation.project.entity.GitCommitLog>().eq(com.obe.evaluation.project.entity.GitCommitLog::getGroupId, groupId)));
+        w.printf("日志总数,%d\n", journalMapper.selectCount(new LambdaQueryWrapper<com.obe.evaluation.project.entity.ProjectJournal>().eq(com.obe.evaluation.project.entity.ProjectJournal::getGroupId, groupId)));
         w.flush();
     }
 }

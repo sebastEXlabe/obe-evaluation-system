@@ -237,8 +237,8 @@ async function calculateAchievement() {
 async function exportCSV() {
   if (!groupId.value) return
   try {
-    const response = await http.get(`/export/achievement-csv?groupId=${groupId.value}`, { responseType: 'blob' })
-    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const blob = await http.get(`/export/achievement-csv?groupId=${groupId.value}`, { responseType: 'blob' })
+    const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
     link.setAttribute('download', `achievement-group-${groupId.value}.csv`)
@@ -247,7 +247,8 @@ async function exportCSV() {
     document.body.removeChild(link)
     window.URL.revokeObjectURL(url)
     ElMessage.success('CSV导出成功')
-  } catch {
+  } catch (e) {
+    console.error('CSV export error:', e)
     ElMessage.error('CSV导出失败')
   }
 }
