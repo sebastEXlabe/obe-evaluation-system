@@ -514,6 +514,7 @@ public class ProjectController {
     @PostMapping("/requirement-changes")
     @Operation(summary = "记录需求变更")
     public R<RequirementChange> addReqChange(@RequestBody RequirementChange c) {
+        if (!isTeacherOrAdmin()) return R.fail(403, "只有教师或管理员可以记录需求变更");
         c.setCreatedBy(currentUserId());
         c.setCreatedAt(LocalDateTime.now());
         reqChangeMapper.insert(c);

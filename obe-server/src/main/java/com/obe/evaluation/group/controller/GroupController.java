@@ -112,6 +112,7 @@ public class GroupController {
     @PostMapping
     @Operation(summary = "创建小组")
     public R<ProjectGroup> createGroup(@RequestBody ProjectGroup group) {
+        group.setTeacherId(currentUserId()); // auto-assign creator as teacher
         groupService.save(group);
         return R.ok(group);
     }
@@ -128,6 +129,7 @@ public class GroupController {
     @DeleteMapping("/{id}")
     @Operation(summary = "删除小组")
     public R<Void> deleteGroup(@PathVariable Long id) {
+        if (!isAdmin() && !isGroupTeacher(id)) return R.fail(403, "只有小组教师或管理员可以删除");
         groupService.removeGroupCascade(id);
         return R.ok();
     }
