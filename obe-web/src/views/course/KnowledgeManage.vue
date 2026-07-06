@@ -6,7 +6,7 @@
       </template>
     </el-alert>
     <div class="kp-iframe-wrapper">
-      <iframe src="/maxkb/" class="kp-iframe" title="MaxKB知识库管理" />
+      <iframe src="/admin/" class="kp-iframe" title="MaxKB知识库管理" />
     </div>
     <el-divider />
     <p style="color:#909399;font-size:13px;margin-bottom:8px">
