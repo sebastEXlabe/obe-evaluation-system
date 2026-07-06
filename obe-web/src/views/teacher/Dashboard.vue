@@ -221,7 +221,6 @@ function renderHeatmap() {
   })
   heatmapChart.data(data)
   heatmapChart.scale('count', { nice: true })
-  heatmapChart.coordinate().transpose()
   heatmapChart.interval()
     .position('name*count')
     .color('count', ['#50a3ba', '#eac736', '#d94e5d'])
