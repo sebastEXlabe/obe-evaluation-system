@@ -126,7 +126,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Chart } from '@antv/g2'
 import http from '../../api/index.js'
@@ -171,6 +171,7 @@ async function loadAll() {
     groups.value = groupRes.data || []
     courses.value = courseRes.data || []
     heatmap.value = heatRes.data || []
+    nextTick(renderHeatmap)
     if (!selectedGroupId.value && groups.value.length > 0)
       selectedGroupId.value = groups.value[0].id
 
@@ -236,7 +237,6 @@ function renderHeatmap() {
   heatmapChart.render()
 }
 
-watch(heatmap, () => nextTick(renderHeatmap), { immediate: true })
 
 async function triggerCalc() {
   calcLoading.value = true
