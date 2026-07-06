@@ -1,7 +1,7 @@
 <template>
   <div class="kp-layout">
     <div class="kp-iframe-wrapper">
-      <iframe src="/maxkb/" class="kp-iframe" title="MaxKB知识库管理" />
+      <iframe :src="maxkbUrl" class="kp-iframe" title="MaxKB知识库管理" />
     </div>
     <el-divider />
     <p style="color:#909399;font-size:13px;margin-bottom:8px">
@@ -23,12 +23,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import http from '../../api/index.js'
 
 const knowledgePoints = ref([])
 const loading = ref(false)
+const maxkbUrl = computed(() => {
+  const loc = window.location
+  return loc.protocol + '//' + loc.hostname + ':8080/'
+})
 
 async function loadAll() {
   loading.value = true
