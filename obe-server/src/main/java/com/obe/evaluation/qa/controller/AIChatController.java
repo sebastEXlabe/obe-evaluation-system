@@ -253,25 +253,20 @@ public class AIChatController {
         record.setAskedAt(LocalDateTime.now());
 
         // 拼接知识库 + 实时系统数据 + 用户问题
-        // 统计知识库规模
-        long kpCount = knowledgePointMapper.selectCount(null);
         StringBuilder prompt = new StringBuilder(
-            "你是OBE-CDIO课程AI助手。你已接入以下数据源：\n"
-            + "1. 课程知识库（MaxKB, " + kpCount + "个知识点）\n"
-            + "2. OBE系统实时数据库（学生成绩、小组达成度、Git提交、任务进度等）\n"
-            + "3. 当前对话实时获取的系统数据见下方" + (systemContext.length() > 0 ? "【用户实时系统数据】" : "（暂无上下文数据）") + "\n\n"
-            + "请严格遵守以下规则：\n"
-            + "1. 只能基于上述数据源回答，不得编造任何数据\n"
-            + "2. 如果数据中没有相关信息，请明确说「系统中暂无此数据」\n"
-            + "3. 不要虚构任何人名、数字、日期或事件\n"
-            + "4. 如果问是否连接到MaxKB，回答：是的，MaxKB知识库已连接，当前有" + kpCount + "个知识点可供检索\n\n");
+            "你是OBE-CDIO课程AI助手。已接入OBE系统实时数据库（学生成绩、小组达成度、Git提交、任务进度等）。\n"
+            + (systemContext.length() > 0 ? "当前系统数据见下方：\n" : "")
+            + "请遵守规则：\n"
+            + "1. 只能基于系统数据和常识回答，不得编造数据\n"
+            + "2. 数据中没有的信息，说「系统中暂无此数据」\n"
+            + "3. 不虚构人名、数字、日期或事件\n\n");
         if (knowledgeContext.length() > 0) {
-            prompt.append("=== 课程知识库 ===\n").append(knowledgeContext).append("\n");
+            prompt.append("=== 课程知识点 ===\n").append(knowledgeContext).append("\n");
         }
         if (systemContext.length() > 0) {
-            prompt.append("=== 用户实时系统数据 ===\n").append(systemContext).append("\n");
+            prompt.append("=== 系统实时数据 ===\n").append(systemContext).append("\n");
         }
-        prompt.append("=== 用户问题 ===\n").append(question);
+        prompt.append("=== 问题 ===\n").append(question);
         String enrichedQuestion = prompt.toString();
 
         String answer = callDeepSeek(enrichedQuestion);

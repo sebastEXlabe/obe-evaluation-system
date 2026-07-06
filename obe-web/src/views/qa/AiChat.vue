@@ -1,10 +1,26 @@
 <template>
   <div class="ai-chat-container">
+    <div class="chat-sidebar">
+      <div class="sidebar-header">
+        <span>历史会话</span>
+        <el-button size="small" text @click="newChat">+ 新建</el-button>
+      </div>
+      <div class="session-list" v-loading="sessionsLoading">
+        <div v-for="s in sessions" :key="s.sessionId" class="session-item" :class="{ active: currentSession===s.sessionId }" @click="switchSession(s)">
+          <div class="session-title">{{ s.title || '新对话' }}</div>
+          <div class="session-actions">
+            <span class="session-count">{{ s.count }}条</span>
+            <el-button size="small" text type="danger" @click.stop="delSession(s)">🗑</el-button>
+          </div>
+        </div>
+        <el-empty v-if="!sessionsLoading && sessions.length===0" description="暂无历史" :image-size="40" />
+      </div>
+    </div>
     <div class="chat-main">
       <div class="chat-header">
         <span>🤖 AI助手 · DeepSeek</span>
         <span style="flex:1"></span>
-        <el-button size="small" text @click="newChat">新对话</el-button>
+        <el-button size="small" text @click="newChat">清空当前</el-button>
       </div>
       <div class="chat-messages" ref="msgBox">
         <div v-if="messages.length===0" class="welcome">
@@ -31,13 +47,17 @@
 </template>
 
 <script setup>
-import { ref, nextTick } from 'vue'
+import { ref, nextTick, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
 import http from '../../api/index.js'
 
 const messages = ref([])
 const input = ref('')
 const thinking = ref(false)
 const msgBox = ref(null)
+const sessions = ref([])
+const sessionsLoading = ref(false)
+const currentSession = ref(null)
 
 function renderMD(text) {
   if (!text) return ''
@@ -57,7 +77,36 @@ function renderMD(text) {
 
 function scrollEnd() { nextTick(() => { if(msgBox.value) msgBox.value.scrollTop = msgBox.value.scrollHeight }) }
 
-function newChat() { messages.value = []; input.value = '' }
+async function loadSessions() {
+  sessionsLoading.value = true
+  try {
+    const { data } = await http.get('/ai-chat/sessions')
+    sessions.value = data || []
+  } catch (e) { console.error(e) } finally { sessionsLoading.value = false }
+}
+
+function newChat() {
+  messages.value = []
+  input.value = ''
+  currentSession.value = null
+}
+
+function switchSession(s) {
+  currentSession.value = s.sessionId
+  messages.value = (s.records || []).slice().reverse().flatMap(r => [
+    { role:'user', content: r.question },
+    { role:'ai', content: r.answer }
+  ])
+  scrollEnd()
+}
+
+async function delSession(s) {
+  try {
+    await http.delete('/ai-chat/sessions/' + s.sessionId)
+    if (currentSession.value === s.sessionId) newChat()
+    loadSessions()
+  } catch (e) { console.error(e) }
+}
 
 async function send() {
   const q = input.value.trim(); if(!q) return
@@ -65,17 +114,33 @@ async function send() {
   messages.value.push({ role:'user', content:q })
   thinking.value = true; scrollEnd()
   try {
-    const { data } = await http.post('/ai-chat/ask', { question: q })
+    const { data } = await http.post('/ai-chat/ask', {
+      question: q,
+      sessionId: currentSession.value || undefined
+    })
+    if (!currentSession.value) currentSession.value = data.sessionId
     messages.value.push({ role:'ai', content: data.answer })
+    loadSessions()
   } catch {
     messages.value.push({ role:'ai', content:'抱歉，AI 服务暂时不可用，请稍后重试。' })
   }
   thinking.value = false; scrollEnd()
 }
+
+onMounted(loadSessions)
 </script>
 
 <style scoped>
 .ai-chat-container { height:calc(100vh - 120px); background:#fff; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,.06); display:flex; overflow:hidden; }
+.chat-sidebar { width:220px; border-right:1px solid #ebeef5; display:flex; flex-direction:column; flex-shrink:0; }
+.sidebar-header { padding:14px 16px; border-bottom:1px solid #ebeef5; display:flex; justify-content:space-between; align-items:center; font-weight:600; }
+.session-list { flex:1; overflow-y:auto; padding:8px; }
+.session-item { padding:10px 12px; border-radius:6px; cursor:pointer; margin-bottom:4px; transition:background .2s; }
+.session-item:hover { background:#f5f7fa; }
+.session-item.active { background:#ecf5ff; }
+.session-title { font-size:13px; margin-bottom:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.session-actions { display:flex; justify-content:space-between; align-items:center; }
+.session-count { font-size:11px; color:#909399; }
 .chat-main { flex:1; display:flex; flex-direction:column; }
 .chat-header { padding:14px 20px; border-bottom:1px solid #ebeef5; display:flex; justify-content:space-between; align-items:center; font-weight:600; }
 .chat-messages { flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:16px; }
@@ -86,7 +151,7 @@ async function send() {
 .msg-row { display:flex; gap:10px; max-width:85%; }
 .msg-row.user { align-self:flex-end; flex-direction:row-reverse; }
 .msg-row.ai { align-self:flex-start; }
-.msg-avatar { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; background:#f0f0f0; flex-shrink:0; }
+.msg-avatar { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; background:#f0f0f5; flex-shrink:0; }
 .msg-bubble { padding:10px 14px; border-radius:12px; font-size:14px; line-height:1.7; white-space:pre-wrap; }
 .md-body :deep(h3) { margin:8px 0 4px; font-size:15px; font-weight:600; }
 .md-body :deep(h4) { margin:6px 0 3px; font-size:14px; font-weight:600; }
