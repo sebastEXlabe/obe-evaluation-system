@@ -57,6 +57,7 @@ public class AIChatController {
     private final com.obe.evaluation.evaluation.mapper.PersonalScoreMapper scoreMapper;
     private final com.obe.evaluation.project.mapper.GitCommitLogMapper gitCommitMapper;
     private final com.obe.evaluation.project.mapper.ProjectTaskMapper taskMapper;
+    private final com.obe.evaluation.qa.service.MaxKBService maxkbService;
 
     @Value("${deepseek.api-key:}")
     private String deepseekApiKey;
@@ -91,34 +92,20 @@ public class AIChatController {
 
         if (question == null || question.isBlank()) return R.fail(400, "问题不能为空");
 
-        // 自动关联知识点：关键词匹配
-        Long matchedKnowledgeId = null;
-        int bestScore = 0;
+        // 从 MaxKB 知识库检索相关内容
         StringBuilder knowledgeContext = new StringBuilder();
-        var allKps = knowledgePointMapper.selectList(null);
-        String qLower = question.toLowerCase();
-        for (var kp : allKps) {
-            knowledgeContext.append("【").append(kp.getChapter()).append("】").append(kp.getTitle()).append("：").append(kp.getContent()).append("\n");
-            // 多维度关键词匹配
-            int score = 0;
-            if (kp.getTitle() != null) {
-                String tLower = kp.getTitle().toLowerCase();
-                if (qLower.contains(tLower)) { score += 10; } // 全匹配
-                else {
-                    // 逐词匹配
-                    for (String word : tLower.split("[\\s，,、()（）]+")) {
-                        if (word.length() >= 2 && qLower.contains(word)) score += 3;
-                    }
-                }
+        try {
+            var paragraphs = maxkbService.searchParagraphs(question, 5);
+            for (String p : paragraphs) {
+                knowledgeContext.append(p).append("\n");
             }
-            if (kp.getContent() != null) {
-                for (String word : kp.getContent().toLowerCase().split("[\\s，,、()（）。]+")) {
-                    if (word.length() >= 3 && qLower.contains(word)) score += 1;
-                }
+            if (!paragraphs.isEmpty()) {
+                log.info("MaxKB knowledge found: {} paragraphs for question: {}", paragraphs.size(), question.substring(0, Math.min(30, question.length())));
             }
-            if (kp.getChapter() != null && qLower.contains(kp.getChapter().toLowerCase())) score += 5;
-            if (score > bestScore) { bestScore = score; matchedKnowledgeId = kp.getId(); }
+        } catch (Exception e) {
+            log.debug("MaxKB knowledge search skipped: {}", e.getMessage());
         }
+        Long matchedKnowledgeId = null;
 
         // 收集课程目标上下文
         if (courseId != null) {
@@ -254,10 +241,11 @@ public class AIChatController {
 
         // 拼接知识库 + 实时系统数据 + 用户问题
         StringBuilder prompt = new StringBuilder(
-            "你是OBE-CDIO课程AI助手。已接入OBE系统实时数据库（学生成绩、小组达成度、Git提交、任务进度等）。\n"
-            + (systemContext.length() > 0 ? "当前系统数据见下方：\n" : "")
-            + "请遵守规则：\n"
-            + "1. 只能基于系统数据和常识回答，不得编造数据\n"
+            "你是OBE-CDIO课程AI助手。已接入以下数据源：\n"
+            + "1. OBE系统实时数据库（学生成绩、小组达成度、Git提交、任务进度等）\n"
+            + (knowledgeContext.length() > 0 ? "2. MaxKB课程知识库（已检索到相关知识点）\n" : "")
+            + "\n请遵守规则：\n"
+            + "1. 基于提供的数据和常识回答，不得编造数据\n"
             + "2. 数据中没有的信息，说「系统中暂无此数据」\n"
             + "3. 不虚构人名、数字、日期或事件\n\n");
         if (knowledgeContext.length() > 0) {
