@@ -59,6 +59,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/auth/users").hasAnyRole("ADMIN", "TEACHER")
                 .requestMatchers("/api/auth/users/**").hasRole("ADMIN")
                 .requestMatchers("/api/auth/**").authenticated()
+                // User management: ADMIN only
+                .requestMatchers("/api/users/**").hasRole("ADMIN")
                 // Course + Analysis + Export + GraduationRequirements: TEACHER/ADMIN only
                 .requestMatchers("/api/course/**", "/api/courses/**", "/api/analysis/calculate", "/api/analysis/suggestions/**", "/api/analysis/improvement-tasks/**", "/api/analysis/ahp-check", "/api/analysis/ahp-calculate", "/api/analysis/ahp-matrix", "/api/analysis/validate-weights").hasAnyRole("ADMIN", "TEACHER")
                 .requestMatchers(HttpMethod.GET, "/api/analysis/**").authenticated()

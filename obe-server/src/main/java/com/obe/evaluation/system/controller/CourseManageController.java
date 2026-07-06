@@ -87,7 +87,16 @@ public class CourseManageController {
             .anyMatch(a -> a.getAuthority().equals("ROLE_TEACHER"));
     }
 
-    @DeleteMapping("/{id}") public R<Void> delete(@PathVariable Long id) { courseMapper.deleteById(id); return R.ok(); }
+    @DeleteMapping("/{id}")
+    public R<Void> delete(@PathVariable Long id) {
+        if (!isAdmin()) {
+            Course existing = courseMapper.selectById(id);
+            if (existing == null || !existing.getTeacherId().equals(currentUserId()))
+                return R.fail(403, "无权删除此课程");
+        }
+        courseMapper.deleteById(id);
+        return R.ok();
+    }
 
     @PostMapping("/{id}/clone")
     @Operation(summary = "克隆课程（管理员/教师）")
