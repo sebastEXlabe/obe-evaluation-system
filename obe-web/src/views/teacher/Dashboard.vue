@@ -71,17 +71,8 @@
     <el-row :gutter="16" class="analytics-row" v-if="analytics">
       <el-col :span="12">
         <el-card header="🔍 知识点问题热力图">
-          <div v-if="heatmap.length" class="heatmap-grid">
-            <div class="heat-cell" v-for="kp in heatmap.slice(0,8)" :key="kp.knowledgeId"
-              :style="{background:kp.color,opacity:Math.min(0.35+kp.questionCount*0.08,1)}">
-              <div class="heat-title">{{ kp.title }}</div>
-              <div class="heat-stats">
-                <span>{{ kp.questionCount }}次提问</span>
-                <el-tag size="small" :type="kp.level==='高频'?'danger':kp.level==='中频'?'warning':''" effect="dark">{{ kp.level }}</el-tag>
-              </div>
-            </div>
-          </div>
-          <el-empty v-else description="暂无知识点提问数据" :image-size="40" />
+          <div ref="heatmapRef" v-show="heatmap.length" style="height:300px"></div>
+          <el-empty v-if="!heatmap.length" description="暂无知识点提问数据" :image-size="40" />
         </el-card>
       </el-col>
       <el-col :span="12">
@@ -135,16 +126,19 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
+import { Chart } from '@antv/g2'
 import http from '../../api/index.js'
 
 const loading = ref(false), calcLoading = ref(false)
-const selectedGroupId = ref(null)  // 初始无选中，loadAll第一阶段加载groups后自动赋值
+const selectedGroupId = ref(null)
 const groups = ref([])
 const achievement = ref(null)
 const analytics = ref(null)
 const heatmap = ref([])
+const heatmapRef = ref(null)
+let heatmapChart = null
 const dataLoop = ref([])
 
 const statCards = computed(() => [
@@ -209,6 +203,40 @@ async function loadAll() {
     console.error('Load dashboard error:', e)
   } finally { loading.value = false }
 }
+
+function renderHeatmap() {
+  if (!heatmapRef.value || !heatmap.value.length) return
+  if (heatmapChart) { heatmapChart.destroy(); heatmapChart = null }
+  const data = heatmap.value.map(kp => ({
+    name: kp.title.length > 12 ? kp.title.slice(0, 12) + '...' : kp.title,
+    count: kp.questionCount,
+    chapter: kp.chapter || '其他',
+    level: kp.level
+  }))
+  heatmapChart = new Chart({
+    container: heatmapRef.value,
+    autoFit: true,
+    height: 300,
+  })
+  heatmapChart.data(data)
+  heatmapChart.scale('count', { nice: true })
+  heatmapChart.coordinate().transpose()
+  heatmapChart.interval()
+    .position('name*count')
+    .color('count', ['#50a3ba', '#eac736', '#d94e5d'])
+    .label('count', { position: 'right', offset: 4 })
+  heatmapChart.tooltip({
+    showTitle: false,
+    showMarkers: false,
+    itemTpl: '<li class="g2-tooltip-list-item"><span style="background-color:{color}" class="g2-tooltip-marker"></span>{name}: <strong>{value}次</strong></li>'
+  })
+  heatmapChart.axis('name', { label: { autoEllipsis: true } })
+  heatmapChart.legend(false)
+  heatmapChart.interaction('element-active')
+  heatmapChart.render()
+}
+
+watch(heatmap, () => nextTick(renderHeatmap))
 
 async function triggerCalc() {
   calcLoading.value = true
