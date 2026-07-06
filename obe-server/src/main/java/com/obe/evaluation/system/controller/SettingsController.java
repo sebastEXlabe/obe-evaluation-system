@@ -201,7 +201,7 @@ public class SettingsController {
             item.put("contributionRatio", score != null ? score.getContributionRatio() : null);
             item.put("bonus", score != null ? score.getBonusTotal() : null);
             item.put("finalScore", score != null ? score.getFinalScore() : null);
-            item.put("achievement", score != null && score.getFinalScore() != null ? score.getFinalScore() / 100.0 : null);
+            item.put("achievement", score != null && score.getFinalScore() != null ? Math.round(score.getFinalScore() / 100.0 * 10000.0) / 10000.0 : null);
             result.add(item);
         }
         return R.ok(result);
