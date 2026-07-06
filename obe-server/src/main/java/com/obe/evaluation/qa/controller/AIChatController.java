@@ -92,18 +92,23 @@ public class AIChatController {
 
         if (question == null || question.isBlank()) return R.fail(400, "问题不能为空");
 
-        // 从 MaxKB 知识库检索相关内容
+        // 从 MaxKB 知识库检索相关内容（关键词+全量兜底）
         StringBuilder knowledgeContext = new StringBuilder();
         try {
-            var paragraphs = maxkbService.searchParagraphs(question, 5);
+            // 提取关键词：去掉常见停用词，取前3个有意义的词
+            String kw = question.replaceAll("[?？，,。！!\\s]+", " ");
+            var paragraphs = maxkbService.searchParagraphs(kw, 5);
+            if (paragraphs.isEmpty()) {
+                paragraphs = maxkbService.getAllParagraphs(8);
+            }
             for (String p : paragraphs) {
                 knowledgeContext.append(p).append("\n");
             }
             if (!paragraphs.isEmpty()) {
-                log.info("MaxKB knowledge found: {} paragraphs for question: {}", paragraphs.size(), question.substring(0, Math.min(30, question.length())));
+                log.info("MaxKB knowledge: {} paragraphs", paragraphs.size());
             }
         } catch (Exception e) {
-            log.debug("MaxKB knowledge search skipped: {}", e.getMessage());
+            log.debug("MaxKB search skipped: {}", e.getMessage());
         }
         Long matchedKnowledgeId = null;
 
@@ -249,10 +254,10 @@ public class AIChatController {
             + "2. 数据中没有的信息，说「系统中暂无此数据」\n"
             + "3. 不虚构人名、数字、日期或事件\n\n");
         if (knowledgeContext.length() > 0) {
-            prompt.append("=== 课程知识点 ===\n").append(knowledgeContext).append("\n");
+            prompt.append("=== MaxKB知识库内容 ===\n").append(knowledgeContext).append("\n");
         }
         if (systemContext.length() > 0) {
-            prompt.append("=== 系统实时数据 ===\n").append(systemContext).append("\n");
+            prompt.append("=== OBE系统实时数据 ===\n").append(systemContext).append("\n");
         }
         prompt.append("=== 问题 ===\n").append(question);
         String enrichedQuestion = prompt.toString();

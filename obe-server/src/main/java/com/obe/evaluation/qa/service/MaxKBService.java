@@ -25,7 +25,7 @@ public class MaxKBService {
     @Value("${maxkb.db.password:}")
     private String dbPassword;
 
-    private boolean dbAvailable = false; // disabled until PG connectivity verified
+    private boolean dbAvailable = true;
     private long lastCheckTime = 0;
 
     private Connection getConnection() throws SQLException {
