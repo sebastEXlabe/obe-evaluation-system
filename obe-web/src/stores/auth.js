@@ -4,7 +4,7 @@ import http from '../api/index.js'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(JSON.parse(localStorage.getItem('user') || '{}'))
-  const token = ref(localStorage.getItem('token') || '')
+  const token = ref(localStorage.getItem('obe_token') || '')
 
   const isLoggedIn = computed(() => !!token.value)
   const isAdmin = computed(() => user.value.roleCode === 'ADMIN')
@@ -15,7 +15,7 @@ export const useAuthStore = defineStore('auth', () => {
     const res = await http.post('/auth/login', { username, password })
     token.value = res.data.token
     user.value = { id: res.data.id, username: res.data.username, realName: res.data.realName, roleCode: res.data.roleCode }
-    localStorage.setItem('token', token.value)
+    localStorage.setItem('obe_token', token.value)
     localStorage.setItem('user', JSON.stringify(user.value))
   }
 

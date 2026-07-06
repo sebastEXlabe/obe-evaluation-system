@@ -43,7 +43,7 @@ async function doLogin() {
   loading.value = true
   try {
     const res = await http.post('/auth/login', { username: form.username, password: form.password })
-    localStorage.setItem('token', res.data.token)
+    localStorage.setItem('obe_token', res.data.token)
     localStorage.setItem('user', JSON.stringify({ id: res.data.id, username: res.data.username, realName: res.data.realName, roleCode: res.data.roleCode }))
     router.push('/')
   } catch { ElMessage.error('登录失败，请检查用户名和密码') } finally { loading.value = false }

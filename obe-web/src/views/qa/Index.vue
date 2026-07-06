@@ -307,7 +307,7 @@ function formatTime(t) { if(!t)return''; const d=new Date(t); return `${d.getMon
 function formatSize(b) { return b<1048576?(b/1024).toFixed(0)+'KB':(b/1048576).toFixed(1)+'MB' }
 
 async function downloadAtt(qid, att) {
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem('obe_token')
   try {
     const res = await fetch('/api/qa/questions/'+qid+'/attachments/'+att.path, {
       headers: { Authorization: 'Bearer '+token }

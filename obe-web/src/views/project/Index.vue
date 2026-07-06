@@ -488,7 +488,7 @@ async function deleteGitRepo(row) {
 async function syncGitRepo(row) {
   if (!row || !row.id) return ElMessage.warning('仓库信息不完整')
   try {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('obe_token')
     const res = await fetch('/api/project/git-repos/' + row.id + '/sync', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }

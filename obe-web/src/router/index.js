@@ -32,7 +32,7 @@ const routes = [
 const router = createRouter({ history: createWebHashHistory(), routes })
 
 router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem('obe_token')
   if (to.path !== '/login' && !token) return next('/login')
   const user = JSON.parse(localStorage.getItem('user') || '{}')
   if (to.meta.roles && !to.meta.roles.includes(user.roleCode || 'STUDENT'))
