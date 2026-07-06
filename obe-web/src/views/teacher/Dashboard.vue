@@ -220,19 +220,18 @@ function renderHeatmap() {
     height: 300,
   })
   heatmapChart.data(data)
-  heatmapChart.scale('count', { nice: true })
   heatmapChart.interval()
-    .position('name*count')
-    .color('count', ['#50a3ba', '#eac736', '#d94e5d'])
-    .label('count', { position: 'right', offset: 4 })
-  heatmapChart.tooltip({
-    showTitle: false,
-    showMarkers: false,
-    itemTpl: '<li class="g2-tooltip-list-item"><span style="background-color:{color}" class="g2-tooltip-marker"></span>{name}: <strong>{value}次</strong></li>'
-  })
-  heatmapChart.axis('name', { label: { autoEllipsis: true } })
+    .encode('x', 'name')
+    .encode('y', 'count')
+    .encode('color', 'count')
+    .scale('color', { palette: ['#50a3ba', '#eac736', '#d94e5d'] })
+    .label({ text: 'count', position: 'right', dx: 4 })
+  heatmapChart.axis('x', { labelAutoEllipsis: true })
+  heatmapChart.axis('y', false)
   heatmapChart.legend(false)
-  heatmapChart.interaction('element-active')
+  heatmapChart.tooltip({
+    items: [{ channel: 'y', name: '提问次数' }]
+  })
   heatmapChart.render()
   console.log('Heatmap rendered with', data.length, 'items')
 }
