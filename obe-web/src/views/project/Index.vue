@@ -4,6 +4,7 @@
       <el-select v-model="groupId" @change="onGroupChange" placeholder="选择小组" style="width:220px" clearable>
         <el-option v-for="g in groups" :key="g.id" :label="g.groupName" :value="g.id" />
       </el-select>
+      <el-input v-model="taskKeyword" placeholder="搜索任务..." style="width:200px" clearable v-if="activeTab==='tasks'" />
       <el-button @click="refreshAll">刷新</el-button>
     </div>
 
@@ -289,9 +290,10 @@ const taskColumns = [
   { status: 'DOING', label: '进行中', color: '#e6a23c' },
   { status: 'DONE', label: '已完成', color: '#67c23a' }
 ]
+const taskKeyword = ref('')
 const taskColMap = computed(() => {
   const map = { TODO: [], DOING: [], DONE: [] }
-  tasks.value.forEach(t => { if (map[t.status]) map[t.status].push(t) })
+  let filtered = taskKeyword.value ? tasks.value.filter(t => (t.title||'').toLowerCase().includes(taskKeyword.value.toLowerCase())) : tasks.value; filtered.forEach(t => { if (map[t.status]) map[t.status].push(t) })
   return map
 })
 
