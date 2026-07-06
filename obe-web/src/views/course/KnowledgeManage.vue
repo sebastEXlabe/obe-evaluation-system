@@ -42,7 +42,7 @@ function openMaxKB() { window.open('http://localhost:8080/admin', '_blank') }
 
 async function loadAll() {
   loading.value = true
-  try { const { data } = await http.get('/knowledge-points'); knowledgePoints.value = data || [] } catch (e) { console.error('Failed to load knowledge points:', e) }
+  try { const { data } = await http.get('/knowledge-points'); knowledgePoints.value = (data?.records || data || []) } catch (e) { console.error('Failed to load knowledge points:', e) }
   loading.value = false
 }
 

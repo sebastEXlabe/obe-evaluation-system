@@ -224,7 +224,7 @@ function renderHeatmap() {
     .encode('x', 'name')
     .encode('y', 'count')
     .encode('color', 'count')
-    .scale('color', { palette: ['#50a3ba', '#fac858', '#ee6666'] })
+    .scale('color', { range: ['#50a3ba', '#fac858', '#ee6666'] })
     .label({ text: 'count', position: 'top', dy: -4, style: { fontSize: 10 } })
   heatmapChart.legend(false)
   heatmapChart.render()
