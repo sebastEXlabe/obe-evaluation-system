@@ -198,6 +198,9 @@ public class EvaluationController {
     @PostMapping("/role")
     @Operation(summary = "提交角色评价")
     public R<RoleEvaluation> createRoleEval(@RequestBody RoleEvaluation e) {
+        if (e.getUserId() == null) return R.fail(400, "请选择被评价的学生");
+        if (e.getGroupId() == null) return R.fail(400, "请选择小组");
+        if (e.getDimension() == null || e.getDimension().isBlank()) return R.fail(400, "评价维度不能为空");
         e.setEvaluatorId(currentUserId());
         roleEvalMapper.insert(e);
         return R.ok(e);
