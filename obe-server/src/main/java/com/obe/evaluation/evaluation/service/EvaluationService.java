@@ -73,7 +73,7 @@ public class EvaluationService {
                     .average()
                     .orElse(0);
         } else {
-            groupTotalScore = 80.0; // default
+            groupTotalScore = 0; // 未评价时得分为0
         }
 
         // 2. Calculate contribution ratio (anti-freerider algorithm)

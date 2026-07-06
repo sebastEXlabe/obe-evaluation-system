@@ -17,6 +17,21 @@ public class GroupService extends ServiceImpl<ProjectGroupMapper, ProjectGroup> 
     private final GroupMemberMapper memberMapper;
     private final SysUserMapper userMapper;
     private final CourseMapper courseMapper;
+    // Cascade-delete mappers
+    private final com.obe.evaluation.analysis.mapper.AchievementResultMapper achievementResultMapper;
+    private final com.obe.evaluation.analysis.mapper.ImprovementSuggestionMapper improvementSuggestionMapper;
+    private final com.obe.evaluation.analysis.mapper.ImprovementTaskMapper improvementTaskMapper;
+    private final com.obe.evaluation.project.mapper.ProjectMilestoneMapper projectMilestoneMapper;
+    private final com.obe.evaluation.project.mapper.ProjectTaskMapper projectTaskMapper;
+    private final com.obe.evaluation.project.mapper.GitCommitLogMapper gitCommitLogMapper;
+    private final com.obe.evaluation.project.mapper.ProjectJournalMapper projectJournalMapper;
+    private final com.obe.evaluation.project.mapper.ContributionLogMapper contributionLogMapper;
+    private final com.obe.evaluation.evaluation.mapper.GroupEvaluationMapper groupEvalMapper;
+    private final com.obe.evaluation.evaluation.mapper.RoleEvaluationMapper roleEvalMapper;
+    private final com.obe.evaluation.evaluation.mapper.PersonalScoreMapper personalScoreMapper;
+    private final com.obe.evaluation.qa.mapper.QuestionAnswerMapper questionAnswerMapper;
+    private final com.obe.evaluation.project.mapper.RepoConfigMapper repoConfigMapper;
+    private final com.obe.evaluation.project.mapper.RequirementChangeMapper requirementChangeMapper;
 
     @Override @Transactional
     public boolean save(ProjectGroup group) {
@@ -75,7 +90,29 @@ public class GroupService extends ServiceImpl<ProjectGroupMapper, ProjectGroup> 
 
     @Transactional
     public boolean removeGroupCascade(Long groupId) {
+        // 按依赖顺序级联删除所有关联数据
+        // 1. 达成度分析
+        achievementResultMapper.delete(new LambdaQueryWrapper<com.obe.evaluation.analysis.entity.AchievementResult>().eq(com.obe.evaluation.analysis.entity.AchievementResult::getGroupId, groupId));
+        improvementSuggestionMapper.delete(new LambdaQueryWrapper<com.obe.evaluation.analysis.entity.ImprovementSuggestion>().eq(com.obe.evaluation.analysis.entity.ImprovementSuggestion::getObjectiveId, null)); // will be cleaned by objective cascade
+        improvementTaskMapper.delete(new LambdaQueryWrapper<com.obe.evaluation.analysis.entity.ImprovementTask>().eq(com.obe.evaluation.analysis.entity.ImprovementTask::getGroupId, groupId));
+        // 2. 项目追踪
+        projectMilestoneMapper.delete(new LambdaQueryWrapper<com.obe.evaluation.project.entity.ProjectMilestone>().eq(com.obe.evaluation.project.entity.ProjectMilestone::getGroupId, groupId));
+        projectTaskMapper.delete(new LambdaQueryWrapper<com.obe.evaluation.project.entity.ProjectTask>().eq(com.obe.evaluation.project.entity.ProjectTask::getGroupId, groupId));
+        gitCommitLogMapper.delete(new LambdaQueryWrapper<com.obe.evaluation.project.entity.GitCommitLog>().eq(com.obe.evaluation.project.entity.GitCommitLog::getGroupId, groupId));
+        projectJournalMapper.delete(new LambdaQueryWrapper<com.obe.evaluation.project.entity.ProjectJournal>().eq(com.obe.evaluation.project.entity.ProjectJournal::getGroupId, groupId));
+        contributionLogMapper.delete(new LambdaQueryWrapper<com.obe.evaluation.project.entity.ContributionLog>().eq(com.obe.evaluation.project.entity.ContributionLog::getGroupId, groupId));
+        // 3. 评价数据
+        groupEvalMapper.delete(new LambdaQueryWrapper<com.obe.evaluation.evaluation.entity.GroupEvaluation>().eq(com.obe.evaluation.evaluation.entity.GroupEvaluation::getGroupId, groupId));
+        roleEvalMapper.delete(new LambdaQueryWrapper<com.obe.evaluation.evaluation.entity.RoleEvaluation>().eq(com.obe.evaluation.evaluation.entity.RoleEvaluation::getGroupId, groupId));
+        personalScoreMapper.delete(new LambdaQueryWrapper<com.obe.evaluation.evaluation.entity.PersonalScore>().eq(com.obe.evaluation.evaluation.entity.PersonalScore::getGroupId, groupId));
+        // 4. 问答与测试
+        questionAnswerMapper.delete(new LambdaQueryWrapper<com.obe.evaluation.qa.entity.QuestionAnswer>().eq(com.obe.evaluation.qa.entity.QuestionAnswer::getGroupId, groupId));
+        // 5. Git仓库配置
+        repoConfigMapper.delete(new LambdaQueryWrapper<com.obe.evaluation.project.entity.RepoConfig>().eq(com.obe.evaluation.project.entity.RepoConfig::getGroupId, groupId));
+        requirementChangeMapper.delete(new LambdaQueryWrapper<com.obe.evaluation.project.entity.RequirementChange>().eq(com.obe.evaluation.project.entity.RequirementChange::getGroupId, groupId));
+        // 6. 成员
         memberMapper.delete(new LambdaQueryWrapper<GroupMember>().eq(GroupMember::getGroupId, groupId));
+        // 7. 小组本体
         return super.removeById(groupId);
     }
 }
