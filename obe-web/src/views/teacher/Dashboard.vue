@@ -140,7 +140,7 @@ import { ElMessage } from 'element-plus'
 import http from '../../api/index.js'
 
 const loading = ref(false), calcLoading = ref(false)
-const selectedGroupId = ref(null)
+const selectedGroupId = ref(null)  // 初始无选中，loadAll第一阶段加载groups后自动赋值
 const groups = ref([])
 const achievement = ref(null)
 const analytics = ref(null)
