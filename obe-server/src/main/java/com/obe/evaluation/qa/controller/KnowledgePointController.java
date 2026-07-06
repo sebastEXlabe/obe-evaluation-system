@@ -61,6 +61,7 @@ public class KnowledgePointController {
     @Operation(summary = "创建知识点")
     public R<KnowledgePoint> create(@RequestBody KnowledgePoint point) {
         if (!canModify()) return R.fail(403, "仅管理员和教师可创建知识点");
+        if (point.getTitle() == null || point.getTitle().isBlank()) return R.fail(400, "知识点标题不能为空");
         if (point.getCreatedAt() == null) point.setCreatedAt(LocalDateTime.now());
         knowledgePointMapper.insert(point);
         return R.ok(point);

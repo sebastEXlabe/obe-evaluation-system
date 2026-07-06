@@ -149,6 +149,9 @@ public class EvaluationController {
     @PostMapping("/group")
     @Operation(summary = "提交小组评价")
     public R<GroupEvaluation> createGroupEval(@RequestBody GroupEvaluation e) {
+        if (e.getGroupId() == null) return R.fail(400, "请选择小组");
+        if (e.getDimension() == null || e.getDimension().isBlank()) return R.fail(400, "评价维度不能为空");
+        if (e.getScore() == null) return R.fail(400, "评分不能为空");
         e.setEvaluatorId(currentUserId());
         groupEvalMapper.insert(e);
         return R.ok(e);

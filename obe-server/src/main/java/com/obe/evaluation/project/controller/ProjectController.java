@@ -88,6 +88,8 @@ public class ProjectController {
     @Operation(summary = "创建里程碑")
     public R<ProjectMilestone> createMilestone(@RequestBody ProjectMilestone m) {
         if (!isTeacherOrAdmin()) return R.fail(403, "无权限");
+        if (m.getTitle() == null || m.getTitle().isBlank()) return R.fail(400, "里程碑名称不能为空");
+        if (m.getGroupId() == null) return R.fail(400, "请选择小组");
         milestoneMapper.insert(m);
         // Notify group members
         try {
@@ -152,6 +154,8 @@ public class ProjectController {
     @Operation(summary = "创建任务")
     public R<ProjectTask> createTask(@RequestBody ProjectTask t) {
         if (!isTeacherOrAdmin()) return R.fail(403, "无权限");
+        if (t.getTitle() == null || t.getTitle().isBlank()) return R.fail(400, "任务标题不能为空");
+        if (t.getGroupId() == null) return R.fail(400, "请选择小组");
         taskMapper.insert(t);
         // Notify relevant users (assignee if set, else group members)
         try {
@@ -236,6 +240,8 @@ public class ProjectController {
     @PostMapping("/journals")
     @Operation(summary = "写日志")
     public R<ProjectJournal> createJournal(@RequestBody ProjectJournal j) {
+        if (j.getContent() == null || j.getContent().isBlank()) return R.fail(400, "日志内容不能为空");
+        if (j.getGroupId() == null) return R.fail(400, "请选择小组");
         j.setUserId(currentUserId());
         if (j.getJournalDate() == null) {
             j.setJournalDate(LocalDate.now());

@@ -37,6 +37,8 @@ public class CourseController {
         return R.ok(objectiveMapper.selectPage(new Page<>(q.getPage(), q.getSize()), wq));
     }
     @PostMapping("/objectives") public R<CourseObjective> add(@RequestBody CourseObjective obj) {
+        if (obj.getTitle() == null || obj.getTitle().isBlank()) return R.fail(400, "目标标题不能为空");
+        if (obj.getCourseId() == null) return R.fail(400, "请选择课程");
         objectiveMapper.insert(obj);
         validateWeights(obj.getCourseId());
         return R.ok(obj);

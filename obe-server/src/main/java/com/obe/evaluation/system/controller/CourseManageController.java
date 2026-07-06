@@ -65,6 +65,7 @@ public class CourseManageController {
 
     @PostMapping
     public R<Course> create(@RequestBody Course c) {
+        if (c.getCourseName() == null || c.getCourseName().isBlank()) return R.fail(400, "课程名称不能为空");
         if (!isAdmin()) c.setTeacherId(currentUserId());
         courseMapper.insert(c); return R.ok(c);
     }

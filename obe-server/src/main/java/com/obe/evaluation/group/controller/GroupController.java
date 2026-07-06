@@ -112,6 +112,12 @@ public class GroupController {
     @PostMapping
     @Operation(summary = "创建小组")
     public R<ProjectGroup> createGroup(@RequestBody ProjectGroup group) {
+        if (group.getGroupName() == null || group.getGroupName().isBlank())
+            return R.fail(400, "小组名称不能为空");
+        if (group.getCourseId() == null)
+            return R.fail(400, "请选择所属课程");
+        if (group.getMaxMembers() != null && group.getMaxMembers() < 2)
+            return R.fail(400, "最大人数至少为2");
         group.setTeacherId(currentUserId()); // auto-assign creator as teacher
         groupService.save(group);
         return R.ok(group);
