@@ -54,9 +54,11 @@ public class GitSyncService {
             try {
                 int count = syncSingleRepo(repo);
                 totalCommits += count;
-                syncedRepos++;
-                repo.setLastSyncedAt(LocalDateTime.now());
-                repoConfigMapper.updateById(repo);
+                if (count > 0) {
+                    syncedRepos++;
+                    repo.setLastSyncedAt(LocalDateTime.now());
+                    repoConfigMapper.updateById(repo);
+                }
             } catch (Exception e) {
                 log.error("Git sync failed for repo {} (groupId={}): {}", repo.getRepo(), groupId, e.getMessage());
                 errors.add(repo.getRepo() + ": " + e.getMessage());
@@ -310,4 +312,3 @@ public class GitSyncService {
         }
     }
 }
-// fixme: cleanup

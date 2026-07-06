@@ -149,7 +149,7 @@ public class SettingsController {
                         count++;
                     }
                 }
-                if (count > 0) overallAchievement = sum / count;
+                if (count > 0) overallAchievement = Math.round(sum / count * 10000.0) / 10000.0;
             }
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("id", g.getId());

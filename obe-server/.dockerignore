@@ -1,0 +1,6 @@
+target/
+uploads/
+.git/
+.gitignore
+*.md
+src/main/resources/static/

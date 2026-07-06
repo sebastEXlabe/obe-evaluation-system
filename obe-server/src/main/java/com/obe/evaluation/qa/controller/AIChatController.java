@@ -15,9 +15,14 @@ import com.obe.evaluation.qa.mapper.KnowledgePointMapper;
 import com.obe.evaluation.qa.mapper.QaRecordMapper;
 import com.obe.evaluation.qa.mapper.QuizMapper;
 import com.obe.evaluation.qa.mapper.SelfTestRecordMapper;
+import com.obe.evaluation.analysis.entity.AchievementResult;
 import com.obe.evaluation.course.entity.CourseObjective;
+import com.obe.evaluation.evaluation.entity.PersonalScore;
+import com.obe.evaluation.project.entity.GitCommitLog;
+import com.obe.evaluation.project.entity.ProjectTask;
 import com.obe.evaluation.course.mapper.CourseObjectiveMapper;
 import com.obe.evaluation.group.entity.GroupMember;
+import com.obe.evaluation.group.entity.ProjectGroup;
 import com.obe.evaluation.group.mapper.GroupMemberMapper;
 import com.obe.evaluation.group.mapper.ProjectGroupMapper;
 import com.obe.evaluation.system.mapper.SysUserMapper;
@@ -36,9 +41,6 @@ import org.springframework.web.client.RestTemplate;
 import java.time.LocalDateTime;
 import java.util.*;
 
-import java.time.LocalDateTime;
-import java.util.*;
-
 @Slf4j
 @RestController @RequestMapping("/api/ai-chat") @RequiredArgsConstructor
 @Tag(name = "AI智能问答（MaxKB）")
@@ -52,12 +54,10 @@ public class AIChatController {
     private final ProjectGroupMapper groupMapper;
     private final com.obe.evaluation.group.mapper.GroupMemberMapper groupMemberMapper;
     private final com.obe.evaluation.system.mapper.SysUserMapper userMapper;
-
-    @Value("${maxkb.base-url:}")
-    private String maxkbBaseUrl;
-
-    @Value("${maxkb.api-key:}")
-    private String maxkbApiKey;
+    private final com.obe.evaluation.analysis.mapper.AchievementResultMapper resultMapper;
+    private final com.obe.evaluation.evaluation.mapper.PersonalScoreMapper scoreMapper;
+    private final com.obe.evaluation.project.mapper.GitCommitLogMapper gitCommitMapper;
+    private final com.obe.evaluation.project.mapper.ProjectTaskMapper taskMapper;
 
     @Value("${deepseek.api-key:}")
     private String deepseekApiKey;
@@ -121,13 +121,127 @@ public class AIChatController {
             if (score > bestScore) { bestScore = score; matchedKnowledgeId = kp.getId(); }
         }
 
-        // 有课程上下文时附加上课程目标
+        // 收集课程目标上下文
         if (courseId != null) {
             var objs = objectiveMapper.selectList(
                 new LambdaQueryWrapper<CourseObjective>().eq(CourseObjective::getCourseId, courseId));
             for (var obj : objs) {
                 knowledgeContext.append("课程目标[").append(obj.getDimension()).append("]：").append(obj.getTitle()).append("\n");
             }
+        }
+
+        // 收集用户实时系统数据（小组列表、达成度、成绩）
+        StringBuilder systemContext = new StringBuilder();
+        try {
+            // 用户可见的小组列表
+            List<Long> visibleGroupIds;
+            if (isTeacherOrAdmin()) {
+                visibleGroupIds = groupMapper.selectList(null).stream().map(ProjectGroup::getId).toList();
+            } else {
+                visibleGroupIds = groupMemberMapper.selectList(
+                    new LambdaQueryWrapper<GroupMember>().eq(GroupMember::getUserId, userId))
+                    .stream().map(GroupMember::getGroupId).toList();
+            }
+            for (Long gid : visibleGroupIds) {
+                var group = groupMapper.selectById(gid);
+                if (group == null) continue;
+                // 成员列表
+                var members = groupMemberMapper.selectList(
+                    new LambdaQueryWrapper<GroupMember>().eq(GroupMember::getGroupId, gid));
+                StringBuilder memberStr = new StringBuilder();
+                for (var m : members) {
+                    var u = userMapper.selectById(m.getUserId());
+                    memberStr.append(u != null ? u.getRealName() : "U"+m.getUserId())
+                        .append("(").append(m.getRoleCode()).append(") ");
+                }
+                // 达成度
+                double achAvg = 0;
+                try {
+                    var ach = resultMapper.selectList(new LambdaQueryWrapper<AchievementResult>()
+                        .eq(AchievementResult::getGroupId, gid).orderByDesc(AchievementResult::getCalcRound));
+                    if (!ach.isEmpty()) {
+                        int lr = ach.get(0).getCalcRound() != null ? ach.get(0).getCalcRound() : 0;
+                        achAvg = ach.stream().filter(r -> r.getCalcRound() != null && r.getCalcRound().equals(lr) && r.getAchievementValue() != null)
+                            .mapToDouble(AchievementResult::getAchievementValue).average().orElse(0);
+                    }
+                } catch (Exception e) { log.debug("Context enrichment skipped: {}", e.getMessage()); }
+                // Git
+                long gitCount = 0;
+                try { gitCount = gitCommitMapper.selectCount(new LambdaQueryWrapper<GitCommitLog>().eq(GitCommitLog::getGroupId, gid)); } catch (Exception e) { log.debug("Context enrichment skipped: {}", e.getMessage()); }
+                // 任务
+                long taskDone = 0, taskTotal = 0;
+                try {
+                    taskTotal = taskMapper.selectCount(new LambdaQueryWrapper<ProjectTask>().eq(ProjectTask::getGroupId, gid));
+                    taskDone = taskMapper.selectCount(new LambdaQueryWrapper<ProjectTask>().eq(ProjectTask::getGroupId, gid).eq(ProjectTask::getStatus, "DONE"));
+                } catch (Exception e) { log.debug("Context enrichment skipped: {}", e.getMessage()); }
+
+                // 成员成绩
+                StringBuilder scoreStr = new StringBuilder();
+                for (var m : members) {
+                    var ps = scoreMapper.selectList(new LambdaQueryWrapper<PersonalScore>()
+                        .eq(PersonalScore::getUserId, m.getUserId())
+                        .eq(PersonalScore::getGroupId, gid));
+                    if (!ps.isEmpty()) {
+                        var s = ps.get(0);
+                        scoreStr.append(String.format("%s:%.0f分(系数%.2f) ",
+                            m.getRoleCode(), s.getFinalScore(), s.getContributionRatio()));
+                    }
+                }
+                systemContext.append(String.format("%s(id=%d) 成员%d人[%s] 达成度=%.4f Git=%d 任务=%d/%d 成绩{%s}\n",
+                    group.getGroupName(), gid, members.size(), memberStr.toString().trim(),
+                    achAvg, gitCount, taskDone, taskTotal, scoreStr.toString().trim()));
+            }
+
+            // 用户个人统计数据 + 全部成绩（不按小组过滤，直接查全部）
+            try {
+                long myQaCount = qaRecordMapper.selectCount(new LambdaQueryWrapper<QaRecord>().eq(QaRecord::getUserId, userId));
+                long myTestCount = selfTestMapper.selectCount(new LambdaQueryWrapper<SelfTestRecord>().eq(SelfTestRecord::getUserId, userId));
+                systemContext.append("\n用户个人统计: AI提问").append(myQaCount).append("次, 自测").append(myTestCount).append("次\n");
+
+                // 直接查该用户全部个人成绩（不按小组过滤）
+                var allMyScores = scoreMapper.selectList(
+                    new LambdaQueryWrapper<PersonalScore>().eq(PersonalScore::getUserId, userId));
+                if (allMyScores.isEmpty()) {
+                    systemContext.append("个人成绩: 暂无\n");
+                } else {
+                    for (var s : allMyScores) {
+                        String gname = groupName(s.getGroupId());
+                        systemContext.append("  小组[").append(gname).append("] id=").append(s.getGroupId())
+                            .append(" 小组分=").append(s.getGroupTotalScore())
+                            .append(" 贡献系数=").append(s.getContributionRatio())
+                            .append(" 最终分=").append(s.getFinalScore())
+                            .append(" 加分=").append(s.getBonusTotal()).append("\n");
+                    }
+                }
+            } catch (Exception e) {
+                systemContext.append("个人成绩: 查询失败(").append(e.getMessage()).append(")\n");
+            }
+
+            // 当前用户的个人成绩（按小组明细）
+            systemContext.append("\n当前用户个人成绩:\n");
+            var memberships = groupMemberMapper.selectList(
+                new LambdaQueryWrapper<GroupMember>().eq(GroupMember::getUserId, userId));
+            for (var m : memberships) {
+                var group = groupMapper.selectById(m.getGroupId());
+                if (group == null) continue;
+                systemContext.append("  小组[").append(group.getGroupName()).append("] 角色=").append(m.getRoleCode()).append(": ");
+                try {
+                    var scores = scoreMapper.selectList(
+                        new LambdaQueryWrapper<PersonalScore>()
+                            .eq(PersonalScore::getUserId, userId)
+                            .eq(PersonalScore::getGroupId, group.getId()));
+                    if (scores.isEmpty()) {
+                        systemContext.append("无成绩记录\n");
+                    }
+                    for (var s : scores) {
+                        systemContext.append("  个人成绩: 小组分=").append(s.getGroupTotalScore())
+                            .append(" 贡献系数=").append(s.getContributionRatio())
+                            .append(" 最终分=").append(s.getFinalScore()).append("\n");
+                    }
+                } catch (Exception e) { log.debug("Context enrichment skipped: {}", e.getMessage()); }
+            }
+        } catch (Exception e) {
+            log.debug("Failed to collect system context: {}", e.getMessage());
         }
 
         QaRecord record = new QaRecord();
@@ -139,12 +253,29 @@ public class AIChatController {
         record.setIsResolved(false);
         record.setAskedAt(LocalDateTime.now());
 
-        // 将知识库上下文传给AI以获得更精准回答
-        String enrichedQuestion = knowledgeContext.length() > 0
-            ? "请基于以下课程知识内容回答用户问题。\n\n=== 课程知识库 ===\n" + knowledgeContext + "\n=== 用户问题 ===\n" + question
-            : question;
+        // 拼接知识库 + 实时系统数据 + 用户问题
+        // 统计知识库规模
+        long kpCount = knowledgePointMapper.selectCount(null);
+        StringBuilder prompt = new StringBuilder(
+            "你是OBE-CDIO课程AI助手。你已接入以下数据源：\n"
+            + "1. 课程知识库（MaxKB, " + kpCount + "个知识点）\n"
+            + "2. OBE系统实时数据库（学生成绩、小组达成度、Git提交、任务进度等）\n"
+            + "3. 当前对话实时获取的系统数据见下方" + (systemContext.length() > 0 ? "【用户实时系统数据】" : "（暂无上下文数据）") + "\n\n"
+            + "请严格遵守以下规则：\n"
+            + "1. 只能基于上述数据源回答，不得编造任何数据\n"
+            + "2. 如果数据中没有相关信息，请明确说「系统中暂无此数据」\n"
+            + "3. 不要虚构任何人名、数字、日期或事件\n"
+            + "4. 如果问是否连接到MaxKB，回答：是的，MaxKB知识库已连接，当前有" + kpCount + "个知识点可供检索\n\n");
+        if (knowledgeContext.length() > 0) {
+            prompt.append("=== 课程知识库 ===\n").append(knowledgeContext).append("\n");
+        }
+        if (systemContext.length() > 0) {
+            prompt.append("=== 用户实时系统数据 ===\n").append(systemContext).append("\n");
+        }
+        prompt.append("=== 用户问题 ===\n").append(question);
+        String enrichedQuestion = prompt.toString();
 
-        String answer = callMaxKB(enrichedQuestion, userId);
+        String answer = callDeepSeek(enrichedQuestion);
         record.setAnswer(answer);
         record.setIsResolved(true);
         qaRecordMapper.insert(record);
@@ -199,8 +330,7 @@ public class AIChatController {
     @GetMapping("/config")
     @Operation(summary = "AI模块配置状态")
     public R<Map<String, Object>> config() {
-        return R.ok(Map.of("hasAI", !deepseekApiKey.isEmpty() || !maxkbBaseUrl.isEmpty(),
-            "model", !deepseekApiKey.isEmpty() ? "DeepSeek" : "MaxKB"));
+        return R.ok(Map.of("hasAI", !deepseekApiKey.isEmpty(), "model", "DeepSeek"));
     }
 
     // ========== AI 自测 ==========
@@ -277,7 +407,7 @@ public class AIChatController {
                     if (Boolean.TRUE.equals(r.get("correct"))) correct++;
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) { log.debug("Context enrichment skipped: {}", e.getMessage()); }
 
         // 保存自测记录
         SelfTestRecord record = new SelfTestRecord();
@@ -635,7 +765,7 @@ public class AIChatController {
                     if (a.getOrDefault("userAnswer", "").equals(orig.get("answer"))) correct++;
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) { log.debug("Context enrichment skipped: {}", e.getMessage()); }
 
         SelfTestRecord record = new SelfTestRecord();
         record.setUserId(userId);
@@ -647,6 +777,18 @@ public class AIChatController {
 
         return R.ok(Map.of("correct", correct, "total", answers.size(),
             "score", answers.size() > 0 ? Math.round(correct * 100.0 / answers.size()) : 0));
+    }
+
+    private String groupName(Long gid) {
+        if (gid == null) return "?";
+        var g = groupMapper.selectById(gid);
+        if (g != null) return g.getGroupName();
+        // 已删除小组，直接查库
+        try {
+            var all = groupMapper.selectList(new LambdaQueryWrapper<ProjectGroup>().eq(ProjectGroup::getId, gid));
+            if (!all.isEmpty()) return all.get(0).getGroupName() + "(已删除)";
+        } catch (Exception e) { log.debug("Context enrichment skipped: {}", e.getMessage()); }
+        return "小组" + gid;
     }
 
     // ========== helpers ==========
@@ -666,45 +808,13 @@ public class AIChatController {
         catch (Exception e) { return "{}"; }
     }
 
-    private String callMaxKB(String question, Long userId) {
-        // 1. 优先直连 DeepSeek API
+    /** 调用 AI：优先 DeepSeek，失败回退本地提示 */
+    private String callAI(String question) {
         if (!deepseekApiKey.isEmpty()) {
-            try {
-                return callDeepSeek(question);
-            } catch (Exception e) {
-                log.warn("DeepSeek API 调用失败: {}", e.getMessage());
-            }
+            try { return callDeepSeek(question); }
+            catch (Exception e) { log.warn("AI调用失败: {}", e.getMessage()); }
         }
-
-        // 2. 尝试 MaxKB
-        if (!maxkbBaseUrl.isEmpty()) {
-            try {
-                RestTemplate rt = createRestTemplate();
-                HttpHeaders headers = new HttpHeaders();
-                headers.setContentType(MediaType.APPLICATION_JSON);
-                headers.setBearerAuth(maxkbApiKey);
-
-                Map<String, Object> reqBody = new LinkedHashMap<>();
-                reqBody.put("query", question);
-                reqBody.put("user_id", userId);
-
-                ResponseEntity<Map> response = rt.exchange(maxkbBaseUrl + "/api/chat",
-                    HttpMethod.POST, new HttpEntity<>(reqBody, headers), Map.class);
-                if (response.getBody() != null && response.getBody().get("answer") != null) {
-                    return response.getBody().get("answer").toString();
-                }
-            } catch (Exception e) {
-                log.warn("MaxKB调用失败: {}", e.getMessage());
-            }
-        }
-
-        // 3. 兜底
-        return "🤖 关于「" + question + "」的问题：\n\n"
-            + "当前AI服务未连接，建议：\n"
-            + "1. 查看课程目标和指标点树了解知识点\n"
-            + "2. 在「答疑解惑」模块向老师提问\n"
-            + "3. 与小组同学讨论交流\n\n"
-            + "💡 管理员可配置 DEEPSEEK_API_KEY 环境变量启用AI服务。";
+        return "🤖 AI服务暂不可用。建议：\n1. 查看课程目标树了解知识点\n2. 在「答疑解惑」向老师提问\n3. 与小组同学讨论";
     }
 
     /** 直连 DeepSeek API (OpenAI 兼容格式) */

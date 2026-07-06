@@ -190,11 +190,10 @@ public class AchievementService {
 
     private double fetchGroupEvaluationScore(Long groupId, String dimension) {
         if (groupId == null) return 0;
+        // 取所有维度的小组评价均分（CODE/DESIGN/DOC/TEST/PRESENTATION/REQUIREMENT）
+        // 不按OBE维度过滤——group_evaluation的dimension是评价方面，不是OBE维度
         var wq = new LambdaQueryWrapper<GroupEvaluation>()
                 .eq(GroupEvaluation::getGroupId, groupId);
-        if (dimension != null && !dimension.isEmpty()) {
-            wq.eq(GroupEvaluation::getDimension, dimension);
-        }
         List<GroupEvaluation> evals = groupEvalMapper.selectList(wq);
         if (evals.isEmpty()) return 0;
         return evals.stream()

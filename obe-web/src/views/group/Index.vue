@@ -24,7 +24,7 @@
               <el-tag type="warning" style="cursor:pointer" @click="copyCode(g.inviteCode)">{{ g.inviteCode || '-' }}</el-tag>
             </div>
             <div class="card-item"><span class="label">成员数：</span>{{ g.memberCount || 0 }} / {{ g.maxMembers || 8 }}</div>
-            <div class="card-item"><span class="label">创建人：</span>{{ g.teacherId ? '教师ID:'+g.teacherId : '-' }}</div>
+            <div class="card-item"><span class="label">教师：</span>{{ g.teacherName || '-' }}</div>
           </div>
           <div class="card-footer">
             <el-button size="small" type="primary" link @click="openMemberDialog(g)">查看成员</el-button>

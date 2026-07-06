@@ -29,6 +29,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -44,8 +45,7 @@ public class QaController {
     private final GroupMemberMapper groupMemberMapper;
     private final ProjectGroupMapper groupMapper;
     private final SysUserMapper userMapper;
-
-    private static final String UPLOAD_DIR = System.getProperty("user.dir") + "/uploads/qa/";
+    private final com.obe.evaluation.common.StorageService storageService;
 
     private Long currentUserId() {
         var auth = SecurityContextHolder.getContext().getAuthentication();
@@ -140,17 +140,8 @@ public class QaController {
             return R.fail(403, "只能为自己的问题上传附件");
 
         try {
-            // Ensure upload dir exists
-            Path uploadPath = Paths.get(UPLOAD_DIR);
-            Files.createDirectories(uploadPath);
-
-            // Generate unique filename
             String originalName = file.getOriginalFilename();
-            String ext = originalName != null && originalName.contains(".")
-                ? originalName.substring(originalName.lastIndexOf(".")) : "";
-            String storedName = UUID.randomUUID().toString() + ext;
-            Path filePath = uploadPath.resolve(storedName);
-            file.transferTo(filePath.toFile());
+            String storedName = storageService.upload("qa-attachments", file);
 
             // Update attachments JSON
             List<Map<String, Object>> attachments = parseAttachments(q.getAttachments());
@@ -164,7 +155,7 @@ public class QaController {
             questionMapper.updateById(q);
 
             return R.ok(Map.of("attachment", att, "totalAttachments", attachments.size()));
-        } catch (IOException e) {
+        } catch (Exception e) {
             log.error("File upload failed: {}", e.getMessage());
             return R.fail(500, "文件上传失败: " + e.getMessage());
         }
@@ -184,10 +175,8 @@ public class QaController {
         if (!isAsker && !isTeacher && !isSameGroup)
             return ResponseEntity.status(403).build();
 
-        Path filePath = Paths.get(UPLOAD_DIR, filename);
-        if (!Files.exists(filePath)) return ResponseEntity.notFound().build();
-
-        // 找到原始文件名
+        // 从MinIO下载
+        InputStream is = storageService.download("qa-attachments", filename);
         String originalName = filename;
         List<Map<String, Object>> atts = parseAttachments(q.getAttachments());
         for (var att : atts) {
@@ -197,9 +186,8 @@ public class QaController {
             }
         }
 
-        byte[] content = Files.readAllBytes(filePath);
-        String contentType = Files.probeContentType(filePath);
-        if (contentType == null) contentType = "application/octet-stream";
+        byte[] content = is.readAllBytes();
+        String contentType = "application/octet-stream";
 
         return ResponseEntity.ok()
             .contentType(org.springframework.http.MediaType.parseMediaType(contentType))

@@ -55,6 +55,8 @@ public class AnalysisController {
     private final com.obe.evaluation.project.mapper.ProjectJournalMapper journalMapper;
     private final com.obe.evaluation.evaluation.mapper.GroupEvaluationMapper groupEvalMapper;
     private final com.obe.evaluation.qa.mapper.SelfTestRecordMapper selfTestMapper;
+    private final com.obe.evaluation.group.mapper.GroupMemberMapper groupMemberMapper;
+    private final com.obe.evaluation.system.mapper.SysUserMapper userMapper;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private Long resolveCourseId(Long groupId) {
@@ -447,7 +449,7 @@ public class AnalysisController {
                             actualScore = evals.isEmpty() ? 0 : evals.stream().mapToDouble(e ->
                                 e.getScore() != null ? e.getScore() : 0).average().orElse(0);
                     }
-                } catch (Exception ignored) {}
+                } catch (Exception e) { log.debug("Skipping method detail: {}", e.getMessage()); }
                 md.put("actualScore", Math.round(actualScore * 100.0) / 100.0);
                 md.put("achievement", m.getFullScore() != null && m.getFullScore() > 0
                     ? Math.round(actualScore / m.getFullScore() * 10000.0) / 10000.0 : 0);
@@ -482,10 +484,38 @@ public class AnalysisController {
 
     @GetMapping("/improvement-tasks")
     @Operation(summary = "查询改进工单（按小组过滤）")
-    public R<List<ImprovementTask>> listTasks(@RequestParam(required = false) Long groupId) {
+    public R<List<Map<String, Object>>> listTasks(@RequestParam(required = false) Long groupId) {
         var wq = new LambdaQueryWrapper<ImprovementTask>().orderByDesc(ImprovementTask::getCreatedAt);
         if (groupId != null) wq.eq(ImprovementTask::getGroupId, groupId);
-        return R.ok(taskMapper.selectList(wq));
+        List<ImprovementTask> tasks = taskMapper.selectList(wq);
+        // enrich with objective title and resolve assignee
+        List<Map<String, Object>> enriched = new ArrayList<>();
+        for (ImprovementTask t : tasks) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", t.getId());
+            item.put("objectiveId", t.getObjectiveId());
+            item.put("groupId", t.getGroupId());
+            item.put("title", t.getTitle() != null ? t.getTitle() : "");
+            item.put("description", t.getDescription() != null ? t.getDescription() : (t.getSuggestion() != null ? t.getSuggestion() : ""));
+            item.put("currentAchievement", t.getCurrentAchievement());
+            item.put("suggestion", t.getSuggestion());
+            item.put("action", t.getAction());
+            item.put("priority", t.getPriority() != null ? t.getPriority() : "LOW");
+            item.put("assignee", t.getAssignee());
+            item.put("assigneeName", t.getAssigneeName() != null ? t.getAssigneeName() : "");
+            item.put("status", t.getStatus());
+            item.put("dueDate", t.getDueDate());
+            item.put("deadline", t.getDueDate()); // frontend compat
+            item.put("createdAt", t.getCreatedAt());
+            item.put("updatedAt", t.getUpdatedAt());
+            // resolve objective title
+            if (t.getObjectiveId() != null) {
+                var obj = objectiveMapper.selectById(t.getObjectiveId());
+                item.put("objectiveTitle", obj != null ? obj.getTitle() : "");
+            }
+            enriched.add(item);
+        }
+        return R.ok(enriched);
     }
 
     @PostMapping("/improvement-tasks/generate")
@@ -495,22 +525,49 @@ public class AnalysisController {
         if (courseId == null) return R.fail(400, "小组未关联课程");
         var objs = objectiveMapper.selectList(
             new LambdaQueryWrapper<CourseObjective>().eq(CourseObjective::getCourseId, courseId));
+
+        // Find group leader for auto-assignment
+        String defaultAssignee = "";
+        String defaultAssigneeName = "";
+        try {
+            var members = groupMemberMapper.selectList(
+                new LambdaQueryWrapper<com.obe.evaluation.group.entity.GroupMember>()
+                    .eq(com.obe.evaluation.group.entity.GroupMember::getGroupId, groupId));
+            for (var m : members) {
+                if ("LEADER".equals(m.getRoleCode())) {
+                    defaultAssignee = String.valueOf(m.getUserId());
+                    var u = userMapper.selectById(m.getUserId());
+                    defaultAssigneeName = u != null ? u.getRealName() : "";
+                    break;
+                }
+            }
+        } catch (Exception e) { log.debug("Failed to resolve group leader: {}", e.getMessage()); }
+
         int created = 0;
         for (var obj : objs) {
             var results = resultMapper.selectList(new LambdaQueryWrapper<AchievementResult>()
                 .eq(AchievementResult::getObjectiveId, obj.getId()).eq(AchievementResult::getGroupId, groupId));
             double ach = results.isEmpty() ? 0 : results.stream().mapToDouble(r -> r.getAchievementValue()!=null?r.getAchievementValue():0).average().orElse(0);
             if (ach < 0.6) {
-                // 检查是否已存在未完成的工单
                 var existing = taskMapper.selectList(new LambdaQueryWrapper<ImprovementTask>()
                     .eq(ImprovementTask::getObjectiveId, obj.getId()).eq(ImprovementTask::getGroupId, groupId)
                     .ne(ImprovementTask::getStatus, "DONE"));
                 if (!existing.isEmpty()) continue;
+
+                String priority = ach < 0.3 ? "HIGH" : ach < 0.45 ? "MEDIUM" : "LOW";
                 ImprovementTask t = new ImprovementTask();
                 t.setObjectiveId(obj.getId()); t.setGroupId(groupId);
+                t.setTitle("「" + obj.getTitle() + "」达成度改进");
+                t.setDescription("课程目标「" + obj.getTitle() + "」当前达成度为 "
+                    + String.format("%.1f", ach * 100) + "%，低于60%及格线。需要针对性改进教学环节以提升达成度。");
                 t.setCurrentAchievement(Math.round(ach*10000.0)/10000.0);
-                t.setSuggestion("["+(ach>=0.4?"一般":"预警")+"] 课程目标「"+obj.getTitle()+"」达成度不足60%，建议加强相关教学环节");
-                t.setStatus("PENDING"); t.setCreatedAt(LocalDateTime.now());
+                t.setSuggestion("[" + priority + "] 课程目标「" + obj.getTitle() + "」达成度不足60%，建议加强相关教学环节");
+                t.setPriority(priority);
+                t.setAssignee(defaultAssignee);
+                t.setAssigneeName(defaultAssigneeName);
+                t.setStatus("PENDING");
+                t.setDueDate(LocalDateTime.now().plusWeeks(2));
+                t.setCreatedAt(LocalDateTime.now());
                 taskMapper.insert(t); created++;
             }
         }

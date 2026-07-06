@@ -11,7 +11,7 @@
           </div>
         </div>
         <div class="overview-progress">
-          <el-progress :percentage="(scores.overallAchievement || 0) * 100" :stroke-width="18" :color="(scores.overallAchievement || 0) >= 0.6 ? '#67c23a' : '#f56c6c'" />
+          <el-progress :percentage="Math.round((scores.overallAchievement || 0) * 1000) / 10" :stroke-width="18" :color="(scores.overallAchievement || 0) >= 0.6 ? '#67c23a' : '#f56c6c'" :format="() => ((scores.overallAchievement || 0) * 100).toFixed(1) + '%'" />
         </div>
       </div>
       <el-empty v-else description="暂无成绩数据" :image-size="80" />
@@ -35,7 +35,7 @@
         <el-table-column label="达成度" min-width="160">
           <template #default="{ row }">
             <div class="progress-cell">
-              <el-progress :percentage="(row.achievement || 0) * 100" :stroke-width="14" :color="row.achievement >= 0.6 ? '#67c23a' : '#f56c6c'" />
+              <el-progress :percentage="Math.round((row.achievement || 0) * 1000) / 10" :stroke-width="14" :color="row.achievement >= 0.6 ? '#67c23a' : '#f56c6c'" />
               <span class="progress-text">{{ ((row.achievement || 0) * 100).toFixed(1) }}%</span>
             </div>
           </template>

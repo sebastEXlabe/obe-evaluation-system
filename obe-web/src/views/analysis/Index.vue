@@ -33,7 +33,7 @@
             <el-table-column label="达成度" min-width="160">
               <template #default="{ row }">
                 <div class="progress-cell">
-                  <el-progress :percentage="(row.achievement || 0) * 100" :stroke-width="14" :color="row.achievement >= 0.6 ? '#67c23a' : '#f56c6c'" />
+                  <el-progress :percentage="Math.round((row.achievement || 0) * 1000) / 10" :stroke-width="14" :color="row.achievement >= 0.6 ? '#67c23a' : '#f56c6c'" />
                   <span class="progress-text">{{ ((row.achievement || 0) * 100).toFixed(1) }}%</span>
                 </div>
               </template>
@@ -72,7 +72,7 @@
               :style="{width:'300px',borderLeft:'4px solid '+(p.passed?'#67c23a':'#f56c6c')}">
               <div style="font-weight:bold;font-size:14px">{{p.requirementNo}} {{p.title}}</div>
               <div style="margin-top:8px">
-                <el-progress :percentage="p.minAchievement*100" :color="p.passed?'#67c23a':'#f56c6c'" :stroke-width="16">
+                <el-progress :percentage="Math.round(p.minAchievement*1000)/10" :color="p.passed?'#67c23a':'#f56c6c'" :stroke-width="16">
                   <span style="font-size:12px">{{(p.minAchievement*100).toFixed(1)}}%</span>
                 </el-progress>
               </div>
@@ -108,8 +108,8 @@
             </el-table-column>
             <el-table-column label="状态" width="100">
               <template #default="{ row }">
-                <el-tag :type="row.status==='COMPLETED'?'success':row.status==='IN_PROGRESS'?'warning':'info'" size="small">
-                  {{ row.status==='COMPLETED'?'已完成':row.status==='IN_PROGRESS'?'进行中':'待处理' }}
+                <el-tag :type="row.status==='DONE'?'success':row.status==='IN_PROGRESS'?'warning':'info'" size="small">
+                  {{ row.status==='DONE'?'已完成':row.status==='IN_PROGRESS'?'进行中':'待处理' }}
                 </el-tag>
               </template>
             </el-table-column>

@@ -14,11 +14,13 @@ import com.obe.evaluation.group.mapper.ProjectGroupMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/student")
 @RequiredArgsConstructor
@@ -92,7 +94,7 @@ public class StudentController {
                 detail.put("achievement", ar.getAchievementValue() != null ? ar.getAchievementValue() : 0);
                 objectiveDetails.add(detail);
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) { log.debug("Achievement detail enrichment skipped: {}", e.getMessage()); }
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("overallAchievement", overallAchievement);

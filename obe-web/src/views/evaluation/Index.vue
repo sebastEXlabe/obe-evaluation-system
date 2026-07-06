@@ -60,7 +60,7 @@
           <el-table-column prop="groupTotalScore" label="小组分" width="100" />
           <el-table-column label="贡献系数" width="150">
             <template #default="{ row }">
-              <el-progress :percentage="(row.contributionRatio || 0) * 100" :stroke-width="16" :format="() => ((row.contributionRatio || 0) * 100).toFixed(0) + '%'" />
+              <el-progress :percentage="Math.round((row.contributionRatio || 0) * 1000) / 10" :stroke-width="16" :format="() => ((row.contributionRatio || 0) * 100).toFixed(0) + '%'" />
             </template>
           </el-table-column>
           <el-table-column prop="bonusTotal" label="加分" width="80" />

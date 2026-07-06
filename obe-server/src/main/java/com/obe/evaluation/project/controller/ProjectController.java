@@ -203,8 +203,8 @@ public class ProjectController {
     // ========== 日志 ==========
 
     @GetMapping("/journals")
-    @Operation(summary = "查询项目日志（学生仅看自己小组）")
-    public R<Page<ProjectJournal>> listJournals(@RequestParam(required = false) Long groupId,
+    @Operation(summary = "查询项目日志（学生仅看自己小组，已解析姓名）")
+    public R<Map<String, Object>> listJournals(@RequestParam(required = false) Long groupId,
                                                  @RequestParam(required = false) Long userId,
                                                  PageQuery q) {
         var wq = new LambdaQueryWrapper<ProjectJournal>();
@@ -216,7 +216,21 @@ public class ProjectController {
         }
         if (userId != null) wq.eq(ProjectJournal::getUserId, userId);
         wq.orderByDesc(ProjectJournal::getCreatedAt);
-        return R.ok(journalMapper.selectPage(new Page<>(q.getPage(), q.getSize()), wq));
+        Page<ProjectJournal> page = journalMapper.selectPage(new Page<>(q.getPage(), q.getSize()), wq);
+        List<Map<String, Object>> enriched = page.getRecords().stream().map(j -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", j.getId()); m.put("groupId", j.getGroupId()); m.put("userId", j.getUserId());
+            m.put("content", j.getContent()); m.put("journalDate", j.getJournalDate());
+            m.put("createdAt", j.getCreatedAt());
+            var u = userMapper.selectById(j.getUserId());
+            m.put("userName", u != null ? u.getRealName() : "");
+            m.put("realName", u != null ? u.getRealName() : "");
+            return m;
+        }).toList();
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("records", enriched); result.put("total", page.getTotal());
+        result.put("size", page.getSize()); result.put("current", page.getCurrent()); result.put("pages", page.getPages());
+        return R.ok(result);
     }
 
     @PostMapping("/journals")
@@ -332,8 +346,8 @@ public class ProjectController {
     // ========== 贡献记录 ==========
 
     @GetMapping("/contributions")
-    @Operation(summary = "查询贡献记录（学生仅看自己小组）")
-    public R<Page<ContributionLog>> listContributions(@RequestParam(required = false) Long groupId,
+    @Operation(summary = "查询贡献记录（学生仅看自己小组，已解析姓名）")
+    public R<Map<String, Object>> listContributions(@RequestParam(required = false) Long groupId,
                                                        @RequestParam(required = false) Long userId,
                                                        PageQuery q) {
         var wq = new LambdaQueryWrapper<ContributionLog>();
@@ -345,7 +359,26 @@ public class ProjectController {
         }
         if (userId != null) wq.eq(ContributionLog::getUserId, userId);
         wq.orderByDesc(ContributionLog::getCreatedAt);
-        return R.ok(contributionMapper.selectPage(new Page<>(q.getPage(), q.getSize()), wq));
+        Page<ContributionLog> page = contributionMapper.selectPage(new Page<>(q.getPage(), q.getSize()), wq);
+        List<Map<String, Object>> enriched = page.getRecords().stream().map(c -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", c.getId()); m.put("groupId", c.getGroupId()); m.put("userId", c.getUserId());
+            m.put("description", c.getDescription()); m.put("bonus", c.getBonusScore());
+            m.put("approved", c.getApproved()); m.put("approvedBy", c.getApprovedBy());
+            m.put("createdAt", c.getCreatedAt());
+            var u = userMapper.selectById(c.getUserId());
+            m.put("userName", u != null ? u.getRealName() : "");
+            m.put("realName", u != null ? u.getRealName() : "");
+            if (c.getApprovedBy() != null) {
+                var approver = userMapper.selectById(c.getApprovedBy());
+                m.put("approverName", approver != null ? approver.getRealName() : "");
+            }
+            return m;
+        }).toList();
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("records", enriched); result.put("total", page.getTotal());
+        result.put("size", page.getSize()); result.put("current", page.getCurrent()); result.put("pages", page.getPages());
+        return R.ok(result);
     }
 
     @PostMapping("/contributions")

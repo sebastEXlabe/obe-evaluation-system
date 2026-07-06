@@ -3,6 +3,7 @@
     <div class="chat-main">
       <div class="chat-header">
         <span>🤖 AI助手 · DeepSeek</span>
+        <span style="flex:1"></span>
         <el-button size="small" text @click="newChat">新对话</el-button>
       </div>
       <div class="chat-messages" ref="msgBox">
@@ -13,7 +14,8 @@
         </div>
         <div v-for="(m,i) in messages" :key="i" class="msg-row" :class="m.role">
           <div class="msg-avatar">{{ m.role==='user'?'👤':'🤖' }}</div>
-          <div class="msg-bubble">{{ m.content }}</div>
+          <div v-if="m.role==='user'" class="msg-bubble">{{ m.content }}</div>
+          <div v-else class="msg-bubble md-body" v-html="renderMD(m.content)"></div>
         </div>
         <div v-if="thinking" class="msg-row ai">
           <div class="msg-avatar">🤖</div>
@@ -36,6 +38,22 @@ const messages = ref([])
 const input = ref('')
 const thinking = ref(false)
 const msgBox = ref(null)
+
+function renderMD(text) {
+  if (!text) return ''
+  return text
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')
+    .replace(/\*(.+?)\*/g,'<i>$1</i>')
+    .replace(/^### (.+)/gm,'<h4>$1</h4>')
+    .replace(/^## (.+)/gm,'<h3>$1</h3>')
+    .replace(/^- (.+)/gm,'<li>$1</li>')
+    .replace(/^(\d+)\. (.+)/gm,'<li>$2</li>')
+    .replace(/```(\w*)\n?([\s\S]+?)```/g,'<pre><code>$2</code></pre>')
+    .replace(/`([^`]+)`/g,'<code>$1</code>')
+    .replace(/\n\n/g,'<br><br>')
+    .replace(/\n/g,'<br>')
+}
 
 function scrollEnd() { nextTick(() => { if(msgBox.value) msgBox.value.scrollTop = msgBox.value.scrollHeight }) }
 
@@ -70,6 +88,15 @@ async function send() {
 .msg-row.ai { align-self:flex-start; }
 .msg-avatar { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; background:#f0f0f0; flex-shrink:0; }
 .msg-bubble { padding:10px 14px; border-radius:12px; font-size:14px; line-height:1.7; white-space:pre-wrap; }
+.md-body :deep(h3) { margin:8px 0 4px; font-size:15px; font-weight:600; }
+.md-body :deep(h4) { margin:6px 0 3px; font-size:14px; font-weight:600; }
+.md-body :deep(li) { margin-left:16px; margin-bottom:4px; }
+.md-body :deep(code) { background:rgba(0,0,0,.06); padding:1px 4px; border-radius:3px; font-size:13px; }
+.md-body :deep(pre) { background:rgba(0,0,0,.06); padding:10px; border-radius:6px; overflow-x:auto; margin:8px 0; }
+.md-body :deep(pre code) { background:none; padding:0; }
+.md-body :deep(b) { font-weight:600; }
+.msg-row.user .msg-bubble.md-body :deep(code),
+.msg-row.user .msg-bubble.md-body :deep(pre) { background:rgba(255,255,255,.2); }
 .msg-row.user .msg-bubble { background:#409EFF; color:#fff; border-bottom-right-radius:4px; }
 .msg-row.ai .msg-bubble { background:#f0f2f5; color:#303133; border-bottom-left-radius:4px; }
 .typing { display:flex; gap:4px; padding:14px 18px; }

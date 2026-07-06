@@ -11,3 +11,6 @@ dist/
 uploads/
 temp/
 *.tmp
+
+# Docker
+obe-server/src/main/resources/static/
