@@ -236,7 +236,7 @@ function renderHeatmap() {
   heatmapChart.render()
 }
 
-watch(heatmap, () => nextTick(renderHeatmap))
+watch(heatmap, () => nextTick(renderHeatmap), { immediate: true })
 
 async function triggerCalc() {
   calcLoading.value = true
