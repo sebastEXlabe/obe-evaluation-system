@@ -4,7 +4,7 @@
       <el-select v-model="groupId" @change="loadAnalysis" placeholder="选择小组" style="width:220px" clearable>
         <el-option v-for="g in groups" :key="g.id" :label="g.groupName" :value="g.id" />
       </el-select>
-      <el-button type="primary" @click="calculateAchievement">计算达成度</el-button>
+      <el-button type="primary" @click="calculateAchievement" :loading="loading" :disabled="!groupId">计算达成度</el-button>
       <el-button type="warning" @click="openAhpDialog">AHP权重校验</el-button>
       <el-button @click="loadAnalysis">刷新</el-button>
       <el-button type="success" @click="exportCSV" :disabled="!groupId">📥 导出CSV报告</el-button>
@@ -93,7 +93,7 @@
           <template #header>
             <div style="display:flex;justify-content:space-between;align-items:center">
               <span style="font-weight:bold">PDCA改进工单</span>
-              <el-button type="primary" size="small" @click="generateImprovementTasks">生成改进工单</el-button>
+              <el-button type="primary" size="small" @click="generateImprovementTasks" :loading="loading">生成改进工单</el-button>
             </div>
           </template>
           <el-table v-if="improvementTasks.length" :data="improvementTasks" border stripe>

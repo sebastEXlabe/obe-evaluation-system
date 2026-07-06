@@ -53,7 +53,7 @@
       <!-- 个人成绩 -->
       <el-tab-pane label="个人成绩" name="personalScores">
         <div style="margin-bottom:12px">
-          <el-button type="primary" @click="calcAllScores">计算全员成绩</el-button>
+          <el-button type="primary" @click="calcAllScores" :loading="loading" :disabled="!groupId">计算全员成绩</el-button>
         </div>
         <el-table :data="personalScores" border stripe v-loading="loading">
           <el-table-column prop="realName" label="用户" width="100" />
