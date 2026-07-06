@@ -1,0 +1,45 @@
+server:
+  port: ${SERVER_PORT:8989}
+  servlet.encoding.charset: UTF-8
+  servlet.encoding.force: true
+
+spring:
+  application.name: obe-evaluation
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/obe_evaluation}
+    username: ${DB_USERNAME:obe_admin}
+    password: ${DB_PASSWORD:ObePass123!}
+    driver-class-name: org.postgresql.Driver
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+  servlet.multipart.max-file-size: 50MB
+  web.resources.cache.cachecontrol.max-age: 0
+  web.resources.cache.cachecontrol.no-cache: true
+
+mybatis-plus:
+  configuration.map-underscore-to-camel-case: true
+  global-config.db-config.id-type: auto
+
+knife4j:
+  enable: true
+  setting.language: zh_cn
+
+jwt:
+  secret: ${JWT_SECRET:obe-cdio-evaluation-jwt-secret-key-2026}
+  expiration: ${JWT_EXPIRATION:86400000}
+
+maxkb:
+  base-url: ${MAXKB_BASE_URL:http://localhost:8080}
+  api-key: ${MAXKB_API_KEY:}
+
+deepseek:
+  api-key: ${DEEPSEEK_API_KEY:}
+  base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com/v1}
+  model: ${DEEPSEEK_MODEL:deepseek-chat}
+
+evaluation:
+  contribution-weight: 0.7
+  role-weight: 0.3
+
+

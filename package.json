@@ -1,0 +1,19 @@
+{
+  "name": "3311346252995122177",
+  "version": "1.0.0",
+  "description": "> **基于 OBE 成果导向 + CDIO 工程教育模式的智能教学评价平台**",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@playwright/test": "^1.61.1"
+  },
+  "dependencies": {
+    "js-yaml": "^5.2.1"
+  }
+}

@@ -1,0 +1,416 @@
+# =====================================================================
+# HttpRunner v4 — OBE-CDIO 全量测试套件
+# 覆盖：认证/RBAC/CRUD/数据验证/错误处理
+# 使用 Node.js 运行器: node run-yaml-tests.js full-suite.yaml
+# =====================================================================
+
+config:
+    name: "OBE-CDIO 全量测试"
+    base_url: "http://localhost:8989"
+    export: ["admin_token", "obj_id"]
+
+teststeps:
+
+# ====================================================================
+# 1. 认证模块
+# ====================================================================
+-   name: "login_success"
+    request:
+        method: POST
+        url: "/api/auth/login"
+        headers: { Content-Type: "application/json" }
+        json: { username: "testadm", password: "admin123" }
+    extract:
+        admin_token: body.data.token
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.code", 200]
+        - eq: ["body.data.roleCode", "ADMIN"]
+
+-   name: "login_bad_password"
+    request:
+        method: POST
+        url: "/api/auth/login"
+        headers: { Content-Type: "application/json" }
+        json: { username: "testadm", password: "WRONG_PASSWORD" }
+    validate:
+        - eq: ["status_code", 400]
+
+-   name: "register_new_student"
+    request:
+        method: POST
+        url: "/api/auth/register"
+        headers: { Content-Type: "application/json" }
+        json: { username: "hrp_full$timestamp", password: "123456", realName: "HRP全量测试" }
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.code", 200]
+        - eq: ["body.data.roleCode", "STUDENT"]
+
+-   name: "register_duplicate_username"
+    request:
+        method: POST
+        url: "/api/auth/register"
+        headers: { Content-Type: "application/json" }
+        json: { username: "testadm", password: "111111", realName: "重复用户名" }
+    validate:
+        - eq: ["status_code", 400]
+
+# ====================================================================
+# 2. 课程目标 CRUD
+# ====================================================================
+-   name: "create_objective"
+    request:
+        method: POST
+        url: "/api/course/objectives"
+        headers: { Authorization: "Bearer $admin_token", Content-Type: "application/json" }
+        json: { objectiveNo: "OBJ-FULL-TEST", title: "全量测试目标", dimension: "KNOWLEDGE", weight: 0.1, courseId: 1 }
+    extract:
+        obj_id: body.data.id
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.code", 200]
+        - eq: ["body.data.objectiveNo", "OBJ-FULL-TEST"]
+
+-   name: "update_objective"
+    request:
+        method: PUT
+        url: "/api/course/objectives"
+        headers: { Authorization: "Bearer $admin_token", Content-Type: "application/json" }
+        json: { id: "$obj_id", objectiveNo: "OBJ-FULL-TEST", title: "全量测试目标-已更新", dimension: "ABILITY", weight: 0.2, courseId: 1 }
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.code", 200]
+        - eq: ["body.data.title", "全量测试目标-已更新"]
+
+-   name: "delete_objective"
+    request:
+        method: DELETE
+        url: "/api/course/objectives/$obj_id"
+        headers: { Authorization: "Bearer $admin_token" }
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.code", 200]
+
+-   name: "course_tree_not_empty"
+    request:
+        method: GET
+        url: "/api/course/tree?courseId=1"
+        headers: { Authorization: "Bearer $admin_token" }
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.code", 200]
+        - len_gt: ["body.data", 0]
+
+# ====================================================================
+# 3. 小组管理
+# ====================================================================
+-   name: "groups_list"
+    request:
+        method: GET
+        url: "/api/groups"
+        headers: { Authorization: "Bearer $admin_token" }
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.code", 200]
+        - len_gt: ["body.data", 0]
+
+-   name: "group_detail"
+    request:
+        method: GET
+        url: "/api/groups/1"
+        headers: { Authorization: "Bearer $admin_token" }
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.code", 200]
+        - eq: ["body.data.group.groupName", "软件工程第1组"]
+
+-   name: "group_members_exist"
+    request:
+        method: GET
+        url: "/api/groups/1/members"
+        headers: { Authorization: "Bearer $admin_token" }
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.code", 200]
+        - len_gt: ["body.data", 0]
+
+# ====================================================================
+# 4. 评价打分
+# ====================================================================
+-   name: "create_group_evaluation"
+    request:
+        method: POST
+        url: "/api/evaluation/group"
+        headers: { Authorization: "Bearer $admin_token", Content-Type: "application/json" }
+        json: { groupId: 1, dimension: "代码质量", score: 88, comment: "HRP测试评价" }
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.code", 200]
+
+-   name: "calculate_personal_scores"
+    request:
+        method: POST
+        url: "/api/evaluation/calculate?groupId=1"
+        headers: { Authorization: "Bearer $admin_token" }
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.code", 200]
+
+-   name: "personal_scores_list"
+    request:
+        method: GET
+        url: "/api/evaluation/personal-scores?groupId=1"
+        headers: { Authorization: "Bearer $admin_token" }
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.code", 200]
+        - len_gt: ["body.data", 0]
+
+# ====================================================================
+# 5. 达成度分析
+# ====================================================================
+-   name: "calculate_achievement"
+    request:
+        method: POST
+        url: "/api/analysis/calculate?groupId=1"
+        headers: { Authorization: "Bearer $admin_token" }
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.code", 200]
+
+-   name: "achievement_details"
+    request:
+        method: GET
+        url: "/api/analysis/achievement?groupId=1"
+        headers: { Authorization: "Bearer $admin_token" }
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.code", 200]
+        - len_gt: ["body.data.objectiveDetails", 0]
+
+-   name: "po_achievement"
+    request:
+        method: GET
+        url: "/api/analysis/po-achievement?groupId=1"
+        headers: { Authorization: "Bearer $admin_token" }
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.code", 200]
+        - len_gt: ["body.data.poDetails", 0]
+
+-   name: "weight_validation"
+    request:
+        method: GET
+        url: "/api/analysis/validate-weights?groupId=1"
+        headers: { Authorization: "Bearer $admin_token" }
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.code", 200]
+        - type_match: ["body.data.totalWeight", "float"]
+
+# ====================================================================
+# 6. 项目追踪
+# ====================================================================
+-   name: "create_milestone"
+    request:
+        method: POST
+        url: "/api/project/milestones"
+        headers: { Authorization: "Bearer $admin_token", Content-Type: "application/json" }
+        json: { groupId: 1, title: "HRP测试里程碑", cdioPhase: "CONCEIVE", dueDate: "2026-12-31", isDone: false }
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.code", 200]
+        - eq: ["body.data.title", "HRP测试里程碑"]
+
+-   name: "create_task"
+    request:
+        method: POST
+        url: "/api/project/tasks"
+        headers: { Authorization: "Bearer $admin_token", Content-Type: "application/json" }
+        json: { groupId: 1, title: "HRP测试任务", status: "TODO" }
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.code", 200]
+
+-   name: "create_journal"
+    request:
+        method: POST
+        url: "/api/project/journals"
+        headers: { Authorization: "Bearer $admin_token", Content-Type: "application/json" }
+        json: { groupId: 1, content: "HRP测试日志内容" }
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.code", 200]
+
+-   name: "create_contribution"
+    request:
+        method: POST
+        url: "/api/project/contributions"
+        headers: { Authorization: "Bearer $admin_token", Content-Type: "application/json" }
+        json: { groupId: 1, description: "HRP测试贡献", bonusScore: 3 }
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.code", 200]
+
+-   name: "git_commits_list"
+    request:
+        method: GET
+        url: "/api/project/git-commits?groupId=1"
+        headers: { Authorization: "Bearer $admin_token" }
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.code", 200]
+
+# ====================================================================
+# 7. 毕业要求
+# ====================================================================
+-   name: "graduation_requirements"
+    request:
+        method: GET
+        url: "/api/graduation-requirements"
+        headers: { Authorization: "Bearer $admin_token" }
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.code", 200]
+        - len_gt: ["body.data", 0]
+
+# ====================================================================
+# 8. 用户管理
+# ====================================================================
+-   name: "user_list"
+    request:
+        method: GET
+        url: "/api/auth/users"
+        headers: { Authorization: "Bearer $admin_token" }
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.code", 200]
+        - len_gt: ["body.data.records", 0]
+
+-   name: "user_search"
+    request:
+        method: GET
+        url: "/api/auth/users/search?keyword=test"
+        headers: { Authorization: "Bearer $admin_token" }
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.code", 200]
+        - len_gt: ["body.data", 0]
+
+# ====================================================================
+# 9. 用户设置
+# ====================================================================
+-   name: "settings_profile"
+    request:
+        method: GET
+        url: "/api/settings/profile"
+        headers: { Authorization: "Bearer $admin_token" }
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.code", 200]
+        - eq: ["body.data.username", "testadm"]
+
+# ====================================================================
+# 10. RBAC 权限控制
+# ====================================================================
+-   name: "unauthenticated_access_denied"
+    request:
+        method: GET
+        url: "/api/courses"
+    validate:
+        - eq: ["status_code", 403]
+
+-   name: "student_cannot_create_milestone"
+    request:
+        method: POST
+        url: "/api/auth/register"
+        headers: { Content-Type: "application/json" }
+        json: { username: "rbac_stu$timestamp", password: "123456", realName: "RBAC测试学生" }
+    extract:
+        student_token: body.data.token
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.data.roleCode", "STUDENT"]
+
+-   name: "student_milestone_denied"
+    request:
+        method: POST
+        url: "/api/project/milestones"
+        headers: { Authorization: "Bearer $student_token", Content-Type: "application/json" }
+        json: { groupId: 1, title: "Should Fail", cdioPhase: "CONCEIVE" }
+    validate:
+        - eq: ["status_code", 403]
+
+# ====================================================================
+# 11. 留言问答（学生→教师）
+# ====================================================================
+-   name: "student_ask_question"
+    request:
+        method: POST
+        url: "/api/qa/questions"
+        headers: { Authorization: "Bearer $admin_token", Content-Type: "application/json" }
+        json: { groupId: 1, title: "测试问题-如何配置权重", question: "我在设置课程目标权重时不太确定各维度之间的比例。请问KNOWLEDGE和ABILITY应该如何分配？" }
+    extract:
+        qid: body.data.id
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.code", 200]
+        - eq: ["body.data.status", "PENDING"]
+
+-   name: "teacher_view_pending"
+    request:
+        method: GET
+        url: "/api/qa/questions/pending"
+        headers: { Authorization: "Bearer $admin_token" }
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.code", 200]
+        - len_gt: ["body.data", 0]
+
+-   name: "teacher_answer_question"
+    request:
+        method: POST
+        url: "/api/qa/questions/$qid/answer"
+        headers: { Authorization: "Bearer $admin_token", Content-Type: "application/json" }
+        json: { answer: "建议KNOWLEDGE占40%，ABILITY占35%，QUALITY占25%。具体可以根据课程目标调整，但要确保总和为1.0。如需做AHP一致性检验，请使用两两比较矩阵。" }
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.data.status", "ANSWERED"]
+
+-   name: "resolve_question"
+    request:
+        method: PUT
+        url: "/api/qa/questions/$qid/resolve"
+        headers: { Authorization: "Bearer $admin_token" }
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.data.status", "RESOLVED"]
+
+-   name: "qa_stats"
+    request:
+        method: GET
+        url: "/api/qa/stats"
+        headers: { Authorization: "Bearer $admin_token" }
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.code", 200]
+
+# ====================================================================
+# 12. 错误处理 / 边界
+# ====================================================================
+-   name: "invalid_id_returns_400"
+    request:
+        method: GET
+        url: "/api/groups/notanumber/members"
+        headers: { Authorization: "Bearer $admin_token" }
+    validate:
+        - eq: ["status_code", 400]
+
+-   name: "missing_required_param"
+    request:
+        method: GET
+        url: "/api/project/milestones"
+        headers: { Authorization: "Bearer $admin_token" }
+    validate:
+        - eq: ["status_code", 400]

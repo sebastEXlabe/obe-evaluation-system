@@ -1,0 +1,791 @@
+  1→# 🔒 深度代码审计报告：obe-evaluation-system
+  2→
+  3→```
+  4→════════════════════════════════════════════════════════════════════════
+  5→项目: OBE-CDIO 软件工程课程教学评价管理系统
+  6→仓库: https://github.com/sebastEXlabe/obe-evaluation-system
+  7→审查范围: 全部 122 个文件（后端 62 Java + 前端 15 Vue/JS + 脚本 6 Python + 配置文件）
+  8→审查深度: 逐文件、逐函数、逐行
+  9→审查日期: 2026-07-04
+ 10→════════════════════════════════════════════════════════════════════════
+ 11→```
+ 12→
+ 13→---
+ 14→
+ 15→## 一、项目概览
+ 16→
+ 17→| 项目 | 详情 |
+ 18→|------|------|
+ 19→| 创建时间 | 2026-07-03 (仅 1 天前) |
+ 20→| Stars/Forks | 0 / 0 |
+ 21→| License | **无** |
+ 22→| 后端 | Spring Boot 3.4.1 + MyBatis-Plus 3.5.5 + PostgreSQL |
+ 23→| 前端 | Vue 3 + Vite 8 + Element Plus + ECharts |
+ 24→| 外部依赖 | Redis、MinIO、MaxKB (AI) |
+ 25→| 用户角色 | ADMIN、TEACHER、STUDENT |
+ 26→| 核心表 | 24 张 |
+ 27→| 文件总数 | 122 |
+ 28→
+ 29→### 技术栈
+ 30→
+ 31→| 层次 | 技术 | 版本 |
+ 32→|------|------|------|
+ 33→| 后端框架 | Spring Boot | 3.4.1 |
+ 34→| JDK | OpenJDK | 21 |
+ 35→| ORM | MyBatis-Plus | 3.5.5 |
+ 36→| 数据库 | PostgreSQL + pgvector | 16 |
+ 37→| 缓存 | Redis | 7 |
+ 38→| 文件存储 | MinIO | latest |
+ 39→| AI知识库 | MaxKB | v2.10.3-lts |
+ 40→| 前端框架 | Vue 3 + Vite | 3.x / 8.x |
+ 41→| UI组件 | Element Plus | 2.x |
+ 42→| 图表 | ECharts 5 | 5.x |
+ 43→| 状态管理 | Pinia | 2.x |
+ 44→| JWT | jjwt | 0.12.6 |
+ 45→| 工具库 | Hutool | 5.8.34 |
+ 46→| JSON | FastJSON2 | 2.0.53 |
+ 47→
+ 48→---
+ 49→
+ 50→## 二、🚨 严重安全漏洞 (CRITICAL)
+ 51→
+ 52→### 2.1 硬编码凭据泄露 (CVSS: 9.8)
+ 53→
+ 54→**位置**: 5 个文件
+ 55→
+ 56→```python
+ 57→# seed_data.py:2 — 数据库密码明文
+ 58→conn = psycopg2.connect(host='localhost', port=5432, dbname='obe_evaluation', user='obe_admin', password=***)
+ 59→
+ 60→# clean_data.py:2 — 同上
+ 61→conn = psycopg2.connect(host='localhost', port=5432, dbname='obe_evaluation', user='obe_admin', password=***)
+ 62→
+ 63→# gen_pwd.py:2 — 无用途密码哈希脚本
+ 64→pw = bcrypt.hashpw(b'admin123', bcrypt.gensalt()).decode()
+ 65→with open(r'C:\Users\woshi\Downloads\3311346252995122177\fix_pwd.sql', 'w') as f:
+ 66→    f.write(f"UPDATE sys_user SET password = '{pw}' WHERE username = 'admin';\n")
+ 67→```
+ 68→
+ 69→```yaml
+ 70→# application.yml:10 — 数据库默认密码
+ 71→spring:
+ 72→  datasource:
+ 73→    password: ${DB_PASSWORD:***}
+ 74→
+ 75→# application.yml:28-29 — MinIO 默认凭据
+ 76→minio:
+ 77→  access-key: ${MINIO_ACCESS_KEY:***}
+ 78→  secret-key: ${MINIO_SECRET_KEY:***}
+ 79→
+ 80→# application.yml:35 — JWT 默认密钥
+ 81→jwt:
+ 82→  secret: ${JWT_SECRET:obe-cd…ong}
+ 83→```
+ 84→
+ 85→**影响**: 任何克隆此仓库的人可直接连接数据库、伪造 JWT Token、访问 MinIO 文件存储。
+ 86→
+ 87→**修复**: 使用 `git filter-repo` 或 BFG Repo-Cleaner 清除历史，将所有凭据移至 `.env` 文件（已在 `.gitignore` 中）。
+ 88→
+ 89→---
+ 90→
+ 91→### 2.2 文件上传路径穿越 (CVSS: 9.1)
+ 92→
+ 93→**位置**: `QaController.java:77-85`
+ 94→
+ 95→```java
+ 96→@PostMapping("/upload")
+ 97→public R<Map<String,String>> upload(@RequestParam("file") MultipartFile file) {
+ 98→    if (file.getSize() > 50 * 1024 * 1024) return R.fail(400, "文件大小不能超过50MB");
+ 99→    String contentType = file.getContentType();
+100→    if (contentType == null || !contentType.startsWith("image/") && ...)
+101→        return R.fail(400, "不支持的文件类型");
+102→    try {
+103→        String dir = "uploads/" + System.currentTimeMillis() / 100000;
+104→        Files.createDirectories(Path.of(dir));
+105→        String path = dir + "/" + file.getOriginalFilename();  // ❌ 未过滤文件名
+106→        file.transferTo(new File(path));
+107→        return R.ok(Map.of("path", "/" + path, "name", file.getOriginalFilename()));
+108→    } catch (IOException e) { return R.fail(500, "上传失败"); }
+109→}
+110→```
+111→
+112→**攻击方式**: 上传文件名为 `../../etc/cron.d/evil` 的文件，可写入任意系统路径。
+113→
+114→**额外问题**:
+115→- 文件名未做任何过滤（`../`、特殊字符）
+116→- 未使用 UUID 重命名，存在文件覆盖风险
+117→- 文件存储在项目运行目录下，非隔离存储
+118→- 返回的 `path` 可被前端直接引用，构成存储型 XSS
+119→- 文件类型校验仅检查 Content-Type，可被绕过
+120→
+121→**修复**:
+122→```java
+123→String safeName = UUID.randomUUID() + "_" + 
+124→    file.getOriginalFilename().replaceAll("[^a-zA-Z0-9._-]", "");
+125→String path = dir + "/" + safeName;
+126→```
+127→
+128→---
+129→
+130→### 2.3 CORS 配置允许任意来源 (CVSS: 8.8)
+131→
+132→**位置**: `SecurityConfig.java:30-35`
+133→
+134→```java
+135→@Bean public CorsConfigurationSource corsConfigurationSource() {
+136→    CorsConfiguration c = new CorsConfiguration();
+137→    c.setAllowedOriginPatterns(List.of("*"));  // ❌ 允许所有来源
+138→    c.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
+139→    c.setAllowedHeaders(List.of("*"));
+140→    c.setAllowCredentials(true);                // ❌ 允许携带 Cookie
+141→    c.setMaxAge(3600L);
+142→    // ...
+143→}
+144→```
+145→
+146→**攻击方式**: 恶意网站可通过 JavaScript 发起携带凭据的跨域请求，读取用户数据。
+147→
+148→**修复**: 替换为环境变量白名单：
+149→```java
+150→c.setAllowedOriginPatterns(List.of("https://your-domain.com"));
+151→```
+152→
+153→---
+154→
+155→### 2.4 JWT 密钥可被利用伪造 Token (CVSS: 8.6)
+156→
+157→**位置**: `JwtUtil.java:16-20`
+158→
+159→```java
+160→public JwtUtil(@Value("${jwt.secret}") String secret,
+161→               @Value("${jwt.expiration}") long expiration) {
+162→    this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+163→    // 默认密钥在 application.yml 中硬编码
+164→}
+165→```
+166→
+167→**攻击方式**: 使用已知的默认密钥 `obe-cdio-evaluation-jwt-secret-at-least-256-bits-long` 伪造任意用户的 JWT Token，包括 ADMIN 角色。
+168→
+169→**修复**: 
+170→- 生成随机强密钥（至少 256 位）
+171→- 启动时校验密钥非默认值
+172→- 将密钥存储在环境变量或密钥管理系统中
+173→
+174→---
+175→
+176→## 三、🔴 高风险漏洞 (HIGH)
+177→
+178→### 3.1 IDOR — 水平越权访问 (CVSS: 7.5)
+179→
+180→**受影响的接口** (共 12 处):
+181→
+182→| # | 接口 | 方法 | 问题 | 文件 |
+183→|---|------|------|------|------|
+184→| 1 | `/api/evaluation/personal?userId=X` | GET | 任意用户可查他人成绩 | EvaluationController.java:68 |
+185→| 2 | `/api/qa/records?userId=X` | GET | 任意用户可查他人问答 | QaController.java:53 |
+186→| 3 | `/api/project/contributions?userId=X` | GET | 任意用户可查他人贡献度 | ProjectController.java:97 |
+187→| 4 | `/api/evaluation/calculate?userId=X` | POST | 任意用户可触发他人成绩计算 | EvaluationController.java:57 |
+188→| 5 | `/api/analysis/student/{userId}` | GET | 任意用户可查他人达成度 | AnalysisController.java:30 |
+189→| 6 | `/api/evaluation/scores/{groupId}` | GET | 任意用户可查任意组成绩 | EvaluationController.java:74 |
+190→| 7 | `/api/project/journals` | POST | 任意用户可伪造他人日志 | ProjectController.java:82 |
+191→| 8 | `/api/project/git-commits` | POST | 任意用户可伪造他人 Git 提交 | ProjectController.java:93 |
+192→| 9 | `/api/project/contributions` | POST | 任意用户可为自己申请加分 | ProjectController.java:100 |
+193→| 10 | `/api/evaluation/group` | POST | 任意用户可添加评价 | EvaluationController.java:34 |
+194→| 11 | `/api/group/{groupId}/members` | POST | 任意用户可加入任意组 | GroupController.java:55 |
+195→| 12 | `/api/project/contributions/{id}/approve` | PUT | 任意用户可审批加分 | ProjectController.java:101 |
+196→
+197→**示例** — 伪造日志:
+198→```java
+199→// ProjectController.java:82
+200→@PostMapping("/journals")
+201→public R<ProjectJournal> submitJournal(@RequestBody ProjectJournal j) {
+202→    j.setJournalDate(java.time.LocalDate.now());  // ❌ 未校验 userId 是否为当前用户
+203→    journalMapper.insert(j); return R.ok(j);
+204→}
+205→```
+206→
+207→学生 A 可通过 `{"userId": 2, "content": "..."}` 为学生 B 写日志。
+208→
+209→**修复模式**:
+210→```java
+211→@PostMapping("/journals")
+212→public R<ProjectJournal> submitJournal(@RequestBody ProjectJournal j) {
+213→    Long currentUserId = (Long) SecurityContextHolder.getContext()
+214→        .getAuthentication().getPrincipal();
+215→    j.setUserId(currentUserId);  // ✅ 强制使用当前用户 ID
+216→    j.setJournalDate(java.time.LocalDate.now());
+217→    journalMapper.insert(j); return R.ok(j);
+218→}
+219→```
+220→
+221→---
+222→
+223→### 3.2 贡献度自审自批 (CVSS: 7.2)
+224→
+225→**位置**: `ProjectController.java:101`
+226→
+227→```java
+228→@PutMapping("/contributions/{id}/approve")
+229→public R<Void> approveContribution(@PathVariable Long id) {
+230→    ContributionLog c = new ContributionLog(); 
+231→    c.setId(id); c.setApproved(true);  // ❌ 无审批人校验
+232→    contribMapper.updateById(c); return R.ok();
+233→}
+234→```
+235→
+236→**问题**: 
+237→- 任何已认证用户可审批任何贡献度（包括自己申请的）
+238→- 未记录审批人 (`approvedBy` 字段未设置)
+239→- 无审批状态机（已审批的可重复审批）
+240→- 无权限限制（应仅限 TEACHER/ADMIN）
+241→
+242→**修复**:
+243→```java
+244→@PutMapping("/contributions/{id}/approve")
+245→public R<Void> approveContribution(@PathVariable Long id) {
+246→    Long approverId = (Long) SecurityContextHolder.getContext()
+247→        .getAuthentication().getPrincipal();
+248→    ContributionLog c = contribMapper.selectById(id);
+249→    if (c == null) return R.fail(404, "记录不存在");
+250→    if (c.getUserId().equals(approverId)) return R.fail(403, "不能审批自己的申请");
+251→    c.setApproved(true);
+252→    c.setApprovedBy(approverId);
+253→    contribMapper.updateById(c);
+254→    return R.ok();
+255→}
+256→```
+257→
+258→---
+259→
+260→### 3.3 评价数据篡改 (CVSS: 7.2)
+261→
+262→**位置**: `EvaluationController.java:34-37`
+263→
+264→```java
+265→@PutMapping("/group")
+266→public R<GroupEvaluation> updateGroupEval(@RequestBody GroupEvaluation e) { 
+267→    groupEvalMapper.updateById(e);  // ❌ 未校验操作者是否为原始评价人
+268→    return R.ok(e); 
+269→}
+270→
+271→@PutMapping("/role")
+272→public R<RoleEvaluation> updateRoleEval(@RequestBody RoleEvaluation e) { 
+273→    roleEvalMapper.updateById(e);  // ❌ 同上
+274→    return R.ok(e); 
+275→}
+276→```
+277→
+278→**攻击方式**: 学生可通过 `PUT /api/evaluation/group` 修改教师的评分记录（只要知道评价 ID）。
+279→
+280→**修复**: 校验操作者是否为原始评价人或具有 ADMIN 角色。
+281→
+282→---
+283→
+284→### 3.4 Git Access Token 明文存储 (CVSS: 7.0)
+285→
+286→**位置**: `RepoConfig.java:12`
+287→
+288→```java
+289→@Data @TableName("repo_config")
+290→public class RepoConfig {
+291→    @TableId(type = IdType.AUTO) private Long id;
+292→    private Long groupId;
+293→    private String platform;    // GITEE / GITHUB
+294→    private String owner;
+295→    private String repo;
+296→    private String accessToken;  // ❌ 明文存储 GitHub/Gitee Fine-grained PAT
+297→    private String branch;
+298→    // ...
+299→}
+300→```
+301→
+302→**位置**: `GitSyncService.java:63`
+303→
+304→```java
+305→// Gitee 同步
+306→String url = String.format(
+307→    "https://gitee.com/api/v5/repos/%s/%s/commits?sha=%s&per_page=100&access_token=%s",
+308→    repo.getOwner(), repo.getRepo(), repo.getBranch(), repo.getAccessToken());
+309→// ❌ Token 拼接在 URL 中，会出现在日志、浏览器历史、代理日志
+310→```
+311→
+312→**影响**: 数据库泄露即等同于 GitHub/Gitee 仓库完全控制权。
+313→
+314→**修复**: 
+315→- 使用 AES 加密存储 accessToken
+316→- GitHub API 使用 Authorization Header 而非 URL 参数
+317→- API 返回时脱敏（`listRepos` 不返回 accessToken）
+318→
+319→---
+320→
+321→### 3.5 注册接口缺少速率限制 (CVSS: 7.0)
+322→
+323→**位置**: `AuthController.java:50`
+324→
+325→```java
+326→@PostMapping("/register")
+327→public ResponseEntity<R<SysUser>> register(@RequestBody Map<String, String> body) {
+328→    // ❌ 无速率限制、无验证码、无邮箱验证
+329→    // ❌ 无密码复杂度校验
+330→    // ...
+331→}
+332→```
+333→
+334→**攻击方式**: 
+335→- 批量注册垃圾用户，耗尽数据库资源
+336→- 使用弱密码字典暴力破解
+337→
+338→**修复**: 添加速率限制（如 Bucket4j）、验证码、密码复杂度校验。
+339→
+340→---
+341→
+342→### 3.6 登录接口缺少速率限制 (CVSS: 7.0)
+343→
+344→**位置**: `AuthController.java:26`
+345→
+346→```java
+347→@PostMapping("/login")
+348→public ResponseEntity<R<Map<String, Object>>> login(@RequestBody Map<String, String> body) {
+349→    // ❌ 无登录失败次数限制
+350→    // ❌ 无账户锁定机制
+351→    // ❌ 无 IP 级别速率限制
+352→}
+353→```
+354→
+355→**攻击方式**: 暴力破解密码。
+356→
+357→---
+358→
+359→## 四、🟡 中等风险漏洞 (MEDIUM)
+360→
+361→### 4.1 业务逻辑漏洞
+362→
+363→#### 4.1.1 成绩计算可被刷分
+364→
+365→**位置**: `EvaluationService.java:28-44`
+366→
+367→```java
+368→// Git贡献：按代码行数加权 + Bayesian平滑
+369→int totalLines = gitMapper.selectList(...)
+370→    .stream().mapToInt(g -> (g.getAdditions() != null ? g.getAdditions() : 0) 
+371→        + (g.getDeletions() != null ? g.getDeletions() : 0)).sum();
+372→int userLines = gitMapper.selectList(...)
+373→    .stream().mapToInt(...).sum();
+374→
+375→double gitRatio = totalLines > 0 ? 
+376→    (double)(userLines + 10) / (totalLines + memberCount * 10) : defaultRatio;
+377→```
+378→
+379→**攻击方式**: 学生可通过提交大量无意义代码（如空行、注释、重复代码）刷高贡献系数。
+380→
+381→#### 4.1.2 自主测验成绩可伪造
+382→
+383→**位置**: `QaController.java:108`
+384→
+385→```java
+386→@PostMapping("/tests") 
+387→public R<SelfTestRecord> addTest(@RequestBody SelfTestRecord t) { 
+388→    testMapper.insert(t);  // ❌ 任何人可提交任意分数的测验记录
+389→    return R.ok(t); 
+390→}
+391→```
+392→
+393→#### 4.1.3 任务状态任意修改
+394→
+395→**位置**: `ProjectController.java:67`
+396→
+397→```java
+398→@PutMapping("/tasks/{id}/status")
+399→public R<Void> updateTaskStatus(@PathVariable Long id, @RequestParam String status) {
+400→    var t = new ProjectTask(); t.setId(id); t.setStatus(status);
+401→    // ❌ 未校验 status 值（可传入任意字符串）
+402→    // ❌ 未校验操作者是否为任务负责人
+403→    taskMapper.updateById(t); return R.ok();
+404→}
+405→```
+406→
+407→---
+408→
+409→### 4.2 审计日志失效
+410→
+411→**位置**: `AuditService.java:14`
+412→
+413→```java
+414→public void log(Long userId, String username, String action, String target) {
+415→    AuditLog log = new AuditLog();
+416→    log.setUserId(userId); log.setUsername(username);
+417→    log.setAction(action); log.setTarget(target);
+418→    log.setIp("127.0.0.1");  // ❌ 永远记录为 localhost
+419→    mappe
+
+…[truncated 6002 of 38770 bytes — rerun with narrower args to see the middle]…
+
+ 无邀请码使用次数限制
+606→- `POST /api/group/join-by-code` 无速率限制
+607→
+608→---
+609→
+610→### 4.9 XSS 风险 — 文件上传路径注入
+611→
+612→**位置**: `qa/Index.vue` — 文件上传后处理
+613→
+614→```javascript
+615→async function onFileSelected(e) {
+616→    const file = e.target.files[0];
+617→    const form = new FormData();
+618→    form.append('file', file);
+619→    try {
+620→        const { data } = await http.post('/qa/upload', form, ...);
+621→        input.value = `[文件: ${data.name}](${data.path})`;  // ❌ 未转义
+622→    } catch { ElMessage.error('上传失败') }
+623→}
+624→```
+625→
+626→**攻击方式**: 上传文件名为 `<img src=x onerror=alert(1)>` 的文件，文件名会被拼接到输入框中。
+627→
+628→---
+629→
+630→## 五、🟢 低风险问题 (LOW)
+631→
+632→### 5.1 代码质量问题
+633→
+634→| # | 问题 | 位置 | 说明 |
+635→|---|------|------|------|
+636→| 1 | 超长行 | GitSyncService.java:63,82 | 单行超过 500 字符，可读性极差 |
+637→| 2 | 魔法数字 | AchievementService.java | `10`, `20`, `25`, `100` 等未定义常量 |
+638→| 3 | 异常静默忽略 | MaxKBClient.java:30 | `catch (Exception ignored) {}` |
+639→| 4 | 异常静默忽略 | GitSyncService.java | 同上，外部 API 调用失败无日志 |
+640→| 5 | Controller 直接操作 Mapper | 多个 Controller | 绕过 Service 层，违反分层架构 |
+641→| 6 | 无输入校验注解 | 所有 Entity | 未使用 `@NotNull`, `@Size` 等 Bean Validation |
+642→| 7 | 无单元测试 | 全项目 | 仅有 Python 集成测试脚本 |
+643→| 8 | 无 API 版本控制 | 所有 Controller | `/api/` 无版本号 |
+644→| 9 | 无国际化 | 全项目 | 错误信息硬编码中文 |
+645→| 10 | 代码重复 | 多个 Controller | 相同的权限校验逻辑重复 |
+646→
+647→### 5.2 依赖安全
+648→
+649→| 依赖 | 版本 | 风险 | 说明 |
+650→|------|------|------|------|
+651→| fastjson2 | 2.0.53 | 🟡 中 | 历史上有多个反序列化漏洞，需确认最新版 |
+652→| hutool-all | 5.8.34 | 🟡 中 | 全量引入，攻击面大，建议按需引入子模块 |
+653→| minio | 8.5.14 | 🟡 中 | 需检查 CVE |
+654→| jjwt | 0.12.6 | ✅ 低 | 较新版本 |
+655→| spring-boot | 3.4.1 | ✅ 低 | 较新版本 |
+656→| mybatis-plus | 3.5.5 | ✅ 低 | 较新版本 |
+657→| element-plus | 2.14.2 | ✅ 低 | 较新版本 |
+658→| vue | 3.5.39 | ✅ 低 | 最新版本 |
+659→
+660→### 5.3 配置问题
+661→
+662→| 问题 | 位置 | 说明 |
+663→|------|------|------|
+664→| Swagger 文档公开暴露 | SecurityConfig.java | `/doc.html`, `/swagger-ui/**` 无需认证 |
+665→| CSRF 禁用 | SecurityConfig.java | 对于 JWT + REST API 可接受 |
+666→| Session 管理 | SecurityConfig.java | `STATELESS` 模式 ✅ |
+667→| 文件上传大小 | application.yml | 50MB 单文件、100MB 总请求，偏大 |
+668→| CORS 全开 | SecurityConfig.java | 已在 CRITICAL 中详述 |
+669→| 无 HSTS | 全项目 | 未配置 HTTPS 强制 |
+670→| 无 CSP | 全项目 | 未配置 Content-Security-Policy |
+671→
+672→### 5.4 数据库设计问题
+673→
+674→| 问题 | 说明 |
+675→|------|------|
+676→| 软删除索引 | `@TableLogic` 使用 `deleted` 字段，但未见部分唯一索引 |
+677→| 无外键约束 | MyBatis-Plus 不自动创建外键，数据完整性依赖应用层 |
+678→| 无数据库迁移工具 | 未使用 Flyway/Liquibase，schema 变更不可追溯 |
+679→| 无数据备份策略 | 未见备份脚本或配置 |
+680→| 审计日志无归档 | `audit_log` 表会无限增长 |
+681→
+682→---
+683→
+684→## 六、业务逻辑缺陷
+685→
+686→### 6.1 反搭便车算法可被绕过
+687→
+688→```java
+689→// EvaluationService.java
+690→// 贡献系数 = (Git行数比 + 日志篇数比) / 2
+691→double gitRatio = (userLines + 10) / (totalLines + memberCount * 10);  // Bayesian 平滑
+692→double jrnlRatio = (userJrnl + 1) / (totalJrnl + memberCount);
+693→double ratio = (gitRatio + jrnlRatio) / 2.0;
+694→```
+695→
+696→**绕过方式**:
+697→1. 提交大量空行/注释代码（增加 additions）
+698→2. 写大量无意义日志（增加 journal 数量）
+699→3. 两人串通：一人写代码，一人刷日志，平分贡献
+700→4. Git 提交可手动录入（`POST /api/project/git-commits`），无需真实提交
+701→
+702→### 6.2 达成度计算数据源不完整
+703→
+704→`AchievementService.java` 中的问题：
+705→
+706→| 数据源 | 问题 |
+707→|--------|------|
+708→| `MANUAL` | 仅取小组平均分，未区分不同评价维度 |
+709→| `ROLE` | 单独计算但未与指标点关联 |
+710→| `GIT` | 取的是整个组的 Git 行数，未按指标点区分 |
+711→| `MAXKB` | 取的是问答总数，与具体课程目标无关 |
+712→| `TEST` | 取的是所有测验平均分，未按知识点分类 |
+713→| `JOURNAL` | 仅计算日志数量，未评估质量 |
+714→
+715→### 6.3 评价维度与课程目标脱节
+716→
+717→评价方式的 `dataSource` 字段决定取数来源，但：
+718→- 所有使用同一 `dataSource` 的评价方式共享同一个分数
+719→- 未按指标点粒度取数
+720→- 权重计算在同一指标点内可能超过 1.0（未校验）
+721→
+722→### 6.4 个人成绩计算公式问题
+723→
+724→```java
+725→// EvaluationService.java
+726→// 最终成绩 = 小组成果分 × (Git+日志贡献系数×70% + 角色评价系数×30%) + 加分
+727→double finalScore = groupTotal * (ratio * 0.7 + roleRatio * 0.3) + bonusTotal;
+728→```
+729→
+730→**问题**:
+731→- `roleRatio` 默认值为 `100/100 = 1.0`（未评价不奖不罚），但如果有一次低分评价，会大幅拉低成绩
+732→- `bonusTotal` 无上限限制
+733→- `finalScore` 可能超过 100（无上限）
+734→
+735→---
+736→
+737→## 七、架构问题
+738→
+739→### 7.1 Controller 直接操作 Mapper
+740→
+741→大量 Controller 直接注入 Mapper 进行 CRUD，绕过 Service 层：
+742→
+743→```java
+744→// CourseController.java
+745→private final CourseObjectiveMapper objectiveMapper;
+746→
+747→@PostMapping("/objectives") 
+748→public R<CourseObjective> addObjective(@RequestBody CourseObjective obj) { 
+749→    objectiveMapper.insert(obj);  // ❌ 无业务校验
+750→    return R.ok(obj); 
+751→}
+752→```
+753→
+754→**受影响的 Controller**:
+755→- `CourseController` — 全部 CRUD
+756→- `ProjectController` — 全部 CRUD
+757→- `EvaluationController` — 部分 CRUD
+758→- `KnowledgePointController` — 全部 CRUD
+759→- `CourseManageController` — 全部 CRUD
+760→- `GitSyncController` — 部分操作
+761→
+762→**影响**: 业务逻辑分散在 Controller 中，难以测试和维护。
+763→
+764→### 7.2 无事务管理
+765→
+766→大部分写操作缺少 `@Transactional` 注解：
+767→
+768→| 方法 | 是否有事务 |
+769→|------|-----------|
+770→| `GroupService.joinGroup()` | ✅ 有 |
+771→| `GroupService.save()` | ✅ 有 |
+772→| `EvaluationService.calculatePersonalScore()` | ✅ 有 |
+773→| `AchievementService.calculateAllAchievements()` | ✅ 有 |
+774→| `GitSyncService.syncRepo()` | ✅ 有 |
+775→| `EvaluationController.addGroupEval()` | ❌ 无 |
+776→| `ProjectController.submitJournal()` | ❌ 无 |
+777→| `AuthController.register()` | ❌ 无 |
+778→| `AuthController.createUser()` | ❌ 无 |
+779→
+780→### 7.3 RestTemplate 未配置超时
+781→
+782→```java
+783→// MaxKBClient.java
+784→private final RestTemplate rest = new RestTemplate();  // ❌ 无超时配置
+785→
+786→// GitSyncService.java
+787→private final RestTemplate rest = new RestTemplate();  // ❌ 同上
+788→```
+789→
+790→**影响**: 外部 API 调用无超时保护，可能导致线程阻塞，影响系统可用性。
+791→
+792→### 7.4 无全局异常处理的边界情况
+793→
+794→```java
+795→// GlobalExceptionHandler.java
+796→@ExceptionHandler(Exception.class)
+797→public R<Void> handleException(Exception e) {
+798→    log.error("系统异常", e);
+799→    return R.fail(500, "系统异常，请联系管理员");
+800→}
+801→```
+802→
+803→**缺失**:
+804→- 未处理 `HttpRequestMethodNotSupportedException`
+805→- 未处理 `MissingServletRequestParameterException`
+806→- 未处理 `HttpMessageNotReadableException`
+807→- 未处理 `MaxUploadSizeExceededException`
+808→- 未处理 `AsyncRequestTimeoutException`
+809→
+810→---
+811→
+812→## 八、缺失的安全措施
+813→
+814→| 缺失项 | 严重性 | 说明 |
+815→|--------|--------|------|
+816→| 速率限制 | 🔴 高 | 无任何接口速率限制 |
+817→| 输入校验 | 🔴 高 | 未使用 Bean Validation |
+818→| CSRF Token | 🟡 中 | 已禁用（JWT 场景可接受） |
+819→| Content-Security-Policy | 🟡 中 | 无 CSP 头 |
+820→| HTTPS 强制 | 🟡 中 | 无 HSTS 配置 |
+821→| 密码复杂度 | 🟡 中 | 注册时无密码强度校验 |
+822→| 账户锁定 | 🟡 中 | 无登录失败锁定机制 |
+823→| 操作审计 | 🟡 中 | 仅记录登录，未记录数据修改 |
+824→| 数据加密 | 🟡 中 | 敏感字段（accessToken）明文存储 |
+825→| API 限流 | 🟡 中 | 无全局限流 |
+826→| 请求日志 | 🟢 低 | 无请求/响应日志记录 |
+827→| 健康检查 | 🟢 低 | 无 `/actuator/health` 端点 |
+828→| 监控指标 | 🟢 低 | 无 Prometheus 指标暴露 |
+829→
+830→---
+831→
+832→## 九、`.reasonix` 目录分析
+833→
+834→仓库中包含 `.reasonix/autoresearch/` 目录，这是 **Reasonix AI 代理工具** 的状态文件：
+835→
+836→```
+837→.reasonix/autoresearch/20260703-202057-ui/
+838→├── logs/heartbeat.jsonl
+839→└── state/
+840→    ├── directions_tried.json
+841→    ├── findings.jsonl
+842→    ├── iteration_log.jsonl
+843→    ├── progress.json
+844→    └── task_spec.json
+845→```
+846→
+847→**task_spec.json 内容**:
+848→```json
+849→{
+850→  "task_id": "20260703-202057-ui",
+851→  "goal": "完整实现问答功能，优化问答功能的UI设计，让问答看起来像是通信软件一般...",
+852→  "allowed_operations": {
+853→    "write": true,
+854→    "network": false,
+855→    "publish": false
+856→  }
+857→}
+858→```
+859→
+860→**说明**: 这是一个 AI 代理自动化开发任务的状态追踪文件。表明该项目可能由 AI 辅助生成。这解释了部分代码风格不一致和安全意识不足的问题。
+861→
+862→**建议**: 将 `.reasonix/` 目录加入 `.gitignore`，不应提交到公开仓库。
+863→
+864→---
+865→
+866→## 十、风险总评
+867→
+868→```
+869→┌─────────────────────────────────────────────────────────────┐
+870→│                    风险矩阵                                  │
+871→├──────────────┬──────────┬───────────────────────────────────┤
+872→│ 级别         │ 数量     │ 关键项                            │
+873→├──────────────┼──────────┼───────────────────────────────────┤
+874→│ 🔴 CRITICAL  │ 4        │ 凭据泄露、路径穿越、CORS、JWT密钥 │
+875→│ 🔴 HIGH      │ 6        │ IDOR(12处)、自审自批、Token明文   │
+876→│ 🟡 MEDIUM    │ 9        │ 刷分、审计失效、分页无限、XSS     │
+877→│ 🟢 LOW       │ 15       │ 代码质量、依赖、配置、架构        │
+878→├──────────────┼──────────┼───────────────────────────────────┤
+879→│ 总计         │ 34       │                                   │
+880→└──────────────┴──────────┴───────────────────────────────────┘
+881→
+882→总体风险等级: 🔴 HIGH — 不建议在生产环境使用
+883→```
+884→
+885→---
+886→
+887→## 十一、修复优先级
+888→
+889→### P0 — 立即修复（阻断级）
+890→
+891→```markdown
+892→□ 清除 Git 历史中的所有硬编码凭据 (git filter-repo/BFG)
+893→□ 修复文件上传路径穿越漏洞（UUID 重命名 + 路径过滤）
+894→□ 修改 CORS 为域名白名单
+895→□ 轮换所有凭据（数据库密码、JWT 密钥、MinIO 凭据）
+896→□ 修复 IDOR 漏洞（12 处接口添加权限校验）
+897→□ Git Access Token 改用 Header 传输 + 加密存储
+898→```
+899→
+900→### P1 — 高优先级
+901→
+902→```markdown
+903→□ 添加全局速率限制 (Bucket4j/Resilience4j)
+904→□ 添加 Bean Validation 输入校验
+905→□ 修复贡献度审批权限（仅限 TEACHER/ADMIN）
+906→□ 修复评价数据修改权限（仅限原始评价人）
+907→□ 分页查询添加最大页大小限制
+908→□ 前端 Token 改用 httpOnly Cookie
+909→□ 添加 API 版本号 (/api/v1/)
+910→□ 修复自主测验成绩伪造问题
+911→□ 添加密码复杂度校验
+912→□ 添加登录失败锁定机制
+913→```
+914→
+915→### P2 — 中优先级
+916→
+917→```markdown
+918→□ 完善审计日志（记录所有敏感操作 + 真实 IP）
+919→□ 实现 Token 刷新机制（Refresh Token）
+920→□ 配置 RestTemplate 超时
+921→□ 分离 Service 层，Controller 不直接操作 Mapper
+922→□ 添加单元测试（至少覆盖核心业务逻辑）
+923→□ 添加数据库迁移工具 (Flyway)
+924→□ 添加请求/响应日志记录
+925→□ 完善全局异常处理
+926→□ 添加 .reasonix 到 .gitignore
+927→```
+928→
+929→### P3 — 低优先级
+930→
+931→```markdown
+932→□ 添加 LICENSE 文件 (MIT)
+933→□ 清理超长行和魔法数字
+934→□ 添加 CSP/HSTS 安全头
+935→□ 依赖最小化（hutool-all → 按需引入子模块）
+936→□ 添加 Docker 生产配置
+937→□ 添加健康检查端点
+938→□ 添加监控指标 (Prometheus)
+939→□ 添加国际化支持
+940→```
+941→
+942→---
+943→
+944→## 十二、结论
+945→
+946→这是一个功能设计较为完整的 OBE 教学评价系统，业务逻辑（反搭便车、达成度计算、多数据源评价）有一定创新性。但从安全角度看，**存在 4 个严重漏洞和 6 个高风险漏洞**，包括凭据硬编码、路径穿越、12 处 IDOR、CORS 配置错误等。
+947→
+948→项目很可能是 AI 辅助生成（包含 `.reasonix` 目录），代码功能实现完整但安全意识明显不足。**强烈建议在修复所有 P0/P1 问题后再考虑任何正式使用场景。**
+949→
+950→### 亮点（正面评价）
+951→
+952→- 架构分层清晰（Controller/Service/Mapper/Entity）
+953→- 使用 Spring Security + JWT 实现认证授权
+954→- RBAC 角色权限控制（ADMIN/TEACHER/STUDENT）
+955→- Bayesian 平滑的反搭便车算法设计合理
+956→- 五数据源达成度计算逻辑完整
+957→- 前端路由守卫 + 角色菜单控制
+958→- 审计日志机制（虽不完善）
+959→- Token 黑名单机制（虽有缺陷）
+960→- 软删除设计保留数据可恢复性
+961→- README 文档详尽
+962→
+963→---
+964→
+965→```
+966→════════════════════════════════════════════════════════════════════════
+967→审查完成: 2026-07-04 08:52 CST
+968→审查文件: 122/122 (100%)
+969→发现问题: 34 个 (Critical:4, High:6, Medium:9, Low:15)
+970→总体评级: 🔴 HIGH RISK
+971→建议: 修复所有 P0/P1 后方可用于非生产环境
+972→════════════════════════════════════════════════════════════════════════
+973→```

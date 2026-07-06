@@ -1,0 +1,25 @@
+config:
+    name: "len_gt_only"
+    base_url: "http://localhost:8989"
+    export: ["token"]
+
+teststeps:
+-   name: "login"
+    request:
+        method: POST
+        url: "/api/auth/login"
+        headers: { Content-Type: "application/json" }
+        json: { username: "testadm", password: "admin123" }
+    extract:
+        token: body.data.token
+    validate:
+        - eq: ["status_code", 200]
+
+-   name: "len_gt_test"
+    request:
+        method: GET
+        url: "/api/groups"
+        headers: { Authorization: "Bearer $token" }
+    validate:
+        - eq: ["status_code", 200]
+        - len_gt: ["body.data.records", 0]

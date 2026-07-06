@@ -1,0 +1,97 @@
+config:
+    name: "batch"
+    base_url: "http://localhost:8989"
+    export: ["token","oid"]
+
+teststeps:
+-   name: "login"
+    request:
+        method: POST
+        url: "/api/auth/login"
+        headers: { Content-Type: "application/json" }
+        json: { username: "testadm", password: "admin123" }
+    extract:
+        token: body.data.token
+    validate:
+        - eq: ["status_code", 200]
+
+-   name: "create_obj"
+    request:
+        method: POST
+        url: "/api/course/objectives"
+        headers: { Authorization: "Bearer $token", Content-Type: "application/json" }
+        json: { objectiveNo: "HRP-BATCH", title: "Batch", dimension: "KNOWLEDGE", weight: 0.1, courseId: 1 }
+    extract:
+        oid: body.data.id
+    validate:
+        - eq: ["status_code", 200]
+
+-   name: "tree"
+    request:
+        method: GET
+        url: "/api/course/tree?courseId=1"
+        headers: { Authorization: "Bearer $token" }
+    validate:
+        - eq: ["status_code", 200]
+
+-   name: "achievement"
+    request:
+        method: GET
+        url: "/api/analysis/achievement?groupId=1"
+        headers: { Authorization: "Bearer $token" }
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.code", 200]
+
+-   name: "po"
+    request:
+        method: GET
+        url: "/api/analysis/po-achievement?groupId=1"
+        headers: { Authorization: "Bearer $token" }
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.code", 200]
+
+-   name: "git_commits"
+    request:
+        method: GET
+        url: "/api/project/git-commits?groupId=1"
+        headers: { Authorization: "Bearer $token" }
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.code", 200]
+
+-   name: "weight"
+    request:
+        method: GET
+        url: "/api/analysis/validate-weights?groupId=1"
+        headers: { Authorization: "Bearer $token" }
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.code", 200]
+
+-   name: "users"
+    request:
+        method: GET
+        url: "/api/auth/users"
+        headers: { Authorization: "Bearer $token" }
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.code", 200]
+
+-   name: "profile"
+    request:
+        method: GET
+        url: "/api/settings/profile"
+        headers: { Authorization: "Bearer $token" }
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.code", 200]
+
+-   name: "delete_obj"
+    request:
+        method: DELETE
+        url: "/api/course/objectives/$oid"
+        headers: { Authorization: "Bearer $token" }
+    validate:
+        - eq: ["status_code", 200]

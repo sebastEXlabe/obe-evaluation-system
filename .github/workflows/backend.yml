@@ -1,0 +1,37 @@
+name: Backend CI
+
+on:
+  push:
+    paths: ['obe-server/**']
+  pull_request:
+    paths: ['obe-server/**']
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: obe_evaluation
+          POSTGRES_USER: obe_admin
+          POSTGRES_PASSWORD: ObePass123!
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+      - name: Build & Test
+        working-directory: obe-server
+        run: mvn verify -q
+        env:
+          DB_URL: jdbc:postgresql://localhost:5432/obe_evaluation
+          DB_USERNAME: obe_admin
+          DB_PASSWORD: ObePass123!

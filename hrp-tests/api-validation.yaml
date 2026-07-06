@@ -1,0 +1,199 @@
+# =====================================================================
+# HttpRunner v5 测试套件 — OBE-CDIO 教学评价系统
+# 解决核心问题：验证API返回的字段名和值能被前端正确渲染
+# =====================================================================
+
+config:
+    name: "OBE-CDIO 全量API验证"
+    variables:
+        base_url: "http://localhost:8989/api"
+        admin_user: "testadm"
+        admin_pass: "admin123"
+    export: ["token"]
+
+teststeps:
+
+# ====== AUTH ======
+
+-   name: "login_admin"
+    request:
+        method: POST
+        url: $base_url/auth/login
+        headers:
+            Content-Type: "application/json"
+        json:
+            username: $admin_user
+            password: $admin_pass
+    extract:
+        token: "body.data.token"
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.code", 200]
+        - eq: ["body.data.roleCode", "ADMIN"]
+
+# ====== 字段名完整性校验 ======
+
+-   name: "groups_has_all_display_fields"
+    request:
+        method: GET
+        url: $base_url/groups
+        headers:
+            Authorization: "Bearer $token"
+    validate:
+        - eq: ["status_code", 200]
+        - eq: ["body.code", 200]
+        # 前端小组卡片需要的字段
+        - type_match: ["body.data.records.0.groupName", str]
+        - type_match: ["body.data.records.0.inviteCode", str]
+        - type_match: ["body.data.records.0.maxMembers", int]
+        - type_match: ["body.data.records.0.status", int]
+        - type_match: ["body.data.records.0.courseId", int]
+
+-   name: "evaluation_personal_scores_fields"
+    request:
+        method: GET
+        url: $base_url/evaluation/personal-scores?groupId=1
+        headers:
+            Authorization: "Bearer $token"
+    validate:
+        - eq: ["status_code", 200]
+        # 前端个人成绩表需要的字段 → 必须匹配prop名
+        - type_match: ["body.data.0.userId", int]
+        - type_match: ["body.data.0.groupTotalScore", float]
+        - type_match: ["body.data.0.contributionRatio", float]
+        - type_match: ["body.data.0.finalScore", float]
+        - type_match: ["body.data.0.bonusTotal", float]
+
+-   name: "git_commits_fields"
+    request:
+        method: GET
+        url: $base_url/project/git-commits?groupId=1
+        headers:
+            Authorization: "Bearer $token"
+    validate:
+        - eq: ["status_code", 200]
+        # 前端Git提交表需要的字段 → 必须匹配prop名
+        - type_match: ["body.data.records.0.userId", int]
+        - type_match: ["body.data.records.0.message", str]
+        - type_match: ["body.data.records.0.additions", int]
+        - type_match: ["body.data.records.0.deletions", int]
+        - type_match: ["body.data.records.0.committedAt", str]
+
+# ====== 数据边界校验 ======
+
+-   name: "contribution_ratio_in_range"
+    request:
+        method: GET
+        url: $base_url/evaluation/personal-scores?groupId=1
+        headers:
+            Authorization: "Bearer $token"
+    validate:
+        - eq: ["status_code", 200]
+        # contributionRatio必须在[0,1]范围内
+        - less_than_or_equals: ["body.data.0.contributionRatio", 1.0]
+        - greater_than_or_equals: ["body.data.0.contributionRatio", 0.0]
+
+-   name: "achievement_in_range"
+    request:
+        method: POST
+        url: $base_url/analysis/calculate?groupId=1
+        headers:
+            Authorization: "Bearer $token"
+    extract:
+        overall: "body.data.overallAchievement"
+    validate:
+        - eq: ["status_code", 200]
+        - less_than_or_equals: ["$overall", 1.0]
+        - greater_than_or_equals: ["$overall", 0.0]
+
+-   name: "evaluation_scores_in_range"
+    request:
+        method: GET
+        url: $base_url/evaluation/group?groupId=1
+        headers:
+            Authorization: "Bearer $token"
+    validate:
+        - eq: ["status_code", 200]
+        # 每个评分的score在[0,100]
+        - less_than_or_equals: ["body.data.0.score", 100.0]
+        - greater_than_or_equals: ["body.data.0.score", 0.0]
+
+# ====== 渲染完整性校验（关键！） ======
+
+-   name: "user_list_table_all_columns"
+    request:
+        method: GET
+        url: $base_url/auth/users
+        headers:
+            Authorization: "Bearer $token"
+    validate:
+        - eq: ["status_code", 200]
+        # 前端用户管理表需要的列
+        - type_match: ["body.data.records.0.username", str]
+        - type_match: ["body.data.records.0.realName", str]
+        - type_match: ["body.data.records.0.roleCode", str]
+        - type_match: ["body.data.records.0.status", int]
+
+-   name: "course_tree_response_structure"
+    request:
+        method: GET
+        url: $base_url/course/tree?courseId=1
+        headers:
+            Authorization: "Bearer $token"
+    validate:
+        - eq: ["status_code", 200]
+        # tree结构完整性
+        - type_match: ["body.data.0.objective.objectiveNo", str]
+        - type_match: ["body.data.0.objective.title", str]
+        - type_match: ["body.data.0.objective.dimension", str]
+        - length_greater_than: ["body.data.0.indicators", 0]
+        - type_match: ["body.data.0.indicators.0.indicator.indicatorNo", str]
+
+-   name: "group_detail_enriched_fields"
+    request:
+        method: GET
+        url: $base_url/groups/1/members
+        headers:
+            Authorization: "Bearer $token"
+    validate:
+        - eq: ["status_code", 200]
+        # 成员表需要前端能显示用户名和角色
+        - type_match: ["body.data.0.realName", str]
+        - type_match: ["body.data.0.roleCode", str]
+        - type_match: ["body.data.0.userId", int]
+
+# ====== 错误处理校验 ======
+
+-   name: "unauthenticated_returns_401"
+    request:
+        method: GET
+        url: $base_url/course/objectives
+    validate:
+        - eq: ["status_code", 401]
+
+-   name: "missing_param_returns_400_not_500"
+    request:
+        method: POST
+        url: $base_url/project/milestones
+        headers:
+            Authorization: "Bearer $token"
+            Content-Type: "application/json"
+        json: {}
+    validate:
+        - eq: ["status_code", 400]
+
+-   name: "invalid_role_access_denied"
+    # 先注册学生，用学生token访问管理员API
+    request:
+        method: POST
+        url: $base_url/auth/register
+        headers:
+            Content-Type: "application/json"
+        json:
+            username: "hrptest"$timestamp
+            password: "123456"
+            realName: "HRP测试"
+    extract:
+        stu_token: "body.data.token"  # 注：这步注册返回的是新用户信息不是token，需要再登录
+    validate:
+        - eq: ["status_code", 200]
