@@ -224,14 +224,9 @@ function renderHeatmap() {
     .encode('x', 'name')
     .encode('y', 'count')
     .encode('color', 'count')
-    .scale('color', { palette: ['#50a3ba', '#eac736', '#d94e5d'] })
-    .label({ text: 'count', position: 'right', dx: 4 })
-  heatmapChart.axis('x', { labelAutoEllipsis: true })
-  heatmapChart.axis('y', false)
+    .scale('color', { palette: ['#50a3ba', '#fac858', '#ee6666'] })
+    .label({ text: 'count', position: 'top', dy: -4, style: { fontSize: 10 } })
   heatmapChart.legend(false)
-  heatmapChart.tooltip({
-    items: [{ channel: 'y', name: '提问次数' }]
-  })
   heatmapChart.render()
   console.log('Heatmap rendered with', data.length, 'items')
 }
