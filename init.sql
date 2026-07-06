@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict e4LdYfbK7b3Os9QYrcDNqEp1JfY3mFMxafpsAR3brOcuBhMqKFmFsbxD1Dc3RYV
+\restrict JaSV4CFZl1I0STdRQIP6RgUxQf8rpSKfctxQ74iONnKSetHcN1zK4mbL5DGW8QR
 
 -- Dumped from database version 16.14 (Debian 16.14-1.pgdg12+1)
 -- Dumped by pg_dump version 16.14 (Debian 16.14-1.pgdg12+1)
@@ -19,10 +19,10 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 -- ============================================================
--- Seed data: default admin user (password: admin123)
+-- Seed data: admin/admin123
 -- ============================================================
-INSERT INTO public.sys_user (username, password, real_name, role_code, status, git_username, git_email)
-VALUES ('admin', '$2a$10$k4cFBGkbK1L/V/c3D1A6heCBGs5AmLGrgwWxQfQXvUmjIb3a3qzVG', '系统管理员', 'ADMIN', 1, 'sebastEXlabe', 'sebasttt@163.com')
+INSERT INTO public.sys_user (username, password, real_name, role_code, status)
+VALUES ('admin', '$2a$10$k4cFBGkbK1L/V/c3D1A6heCBGs5AmLGrgwWxQfQXvUmjIb3a3qzVG', '系统管理员', 'ADMIN', 1)
 ON CONFLICT (username) DO NOTHING;
 
 SET default_tablespace = '';
@@ -2408,5 +2408,5 @@ ALTER TABLE ONLY public.self_test_record
 -- PostgreSQL database dump complete
 --
 
-\unrestrict e4LdYfbK7b3Os9QYrcDNqEp1JfY3mFMxafpsAR3brOcuBhMqKFmFsbxD1Dc3RYV
+\unrestrict JaSV4CFZl1I0STdRQIP6RgUxQf8rpSKfctxQ74iONnKSetHcN1zK4mbL5DGW8QR
 
