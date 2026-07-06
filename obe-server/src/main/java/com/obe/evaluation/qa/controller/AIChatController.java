@@ -576,6 +576,7 @@ public class AIChatController {
 
         Map<Long, Map<String, Object>> userMap = new LinkedHashMap<>();
         for (QaRecord q : allQa) {
+            if (q.getUserId() == null) continue; // skip orphan records
             userMap.computeIfAbsent(q.getUserId(), k -> {
                 var u = userMapper.selectById(k);
                 Map<String, Object> m = new LinkedHashMap<>();
@@ -589,6 +590,7 @@ public class AIChatController {
             if (Boolean.TRUE.equals(q.getIsResolved())) s.put("resolvedCount", (Long) s.get("resolvedCount") + 1);
         }
         for (SelfTestRecord t : allTests) {
+            if (t.getUserId() == null) continue;
             userMap.computeIfAbsent(t.getUserId(), k -> {
                 var u = userMapper.selectById(k);
                 Map<String, Object> m = new LinkedHashMap<>();
@@ -605,7 +607,7 @@ public class AIChatController {
             s.put("avgQuizScore", Math.round(((oldAvg * (qc - 1) + newScore) / qc) * 10.0) / 10.0);
         }
 
-        // Mark alerts: low activity
+        // Mark alerts and enrich with achievement/contribution/score data
         int alertCount = 0;
         for (var entry : userMap.entrySet()) {
             Map<String, Object> s = entry.getValue();
@@ -613,6 +615,42 @@ public class AIChatController {
             boolean lowActivity = qaCount < 3;
             s.put("alert", lowActivity ? "提问活跃度低" : "正常");
             if (lowActivity) alertCount++;
+
+            // Enrich with personal score data
+            Long uid = (Long) s.get("userId");
+            try {
+                var scores = scoreMapper.selectList(
+                    new LambdaQueryWrapper<PersonalScore>().eq(PersonalScore::getUserId, uid));
+                if (!scores.isEmpty()) {
+                    var latest = scores.get(0);
+                    s.put("contributionRatio", latest.getContributionRatio());
+                    s.put("finalScore", latest.getFinalScore());
+                    s.put("groupTotalScore", latest.getGroupTotalScore());
+                } else {
+                    s.put("contributionRatio", null);
+                    s.put("finalScore", null);
+                    s.put("groupTotalScore", null);
+                }
+                // Get achievement average
+                var memberships = groupMemberMapper.selectList(
+                    new LambdaQueryWrapper<GroupMember>().eq(GroupMember::getUserId, uid));
+                double achSum = 0; int achCount = 0;
+                for (var m : memberships) {
+                    var results = resultMapper.selectList(
+                        new LambdaQueryWrapper<AchievementResult>()
+                            .eq(AchievementResult::getGroupId, m.getGroupId())
+                            .orderByDesc(AchievementResult::getCalcRound));
+                    if (!results.isEmpty()) {
+                        int lr = results.get(0).getCalcRound() != null ? results.get(0).getCalcRound() : 0;
+                        achSum += results.stream()
+                            .filter(r -> r.getCalcRound() != null && r.getCalcRound().equals(lr) && r.getAchievementValue() != null)
+                            .mapToDouble(AchievementResult::getAchievementValue).average().orElse(0);
+                        achCount++;
+                    }
+                }
+                s.put("achievement", achCount > 0 ? Math.round(achSum / achCount * 10000.0) / 10000.0 : 0);
+            } catch (Exception e) { log.debug("Skipping score enrichment for userId={}: {}", uid, e.getMessage()); }
+
             studentActivity.add(s);
         }
         studentActivity.sort((a, b) -> Long.compare((Long) a.get("qaCount"), (Long) b.get("qaCount")));

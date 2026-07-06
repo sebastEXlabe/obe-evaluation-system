@@ -73,7 +73,7 @@
         <el-card header="🔍 知识点问题热力图">
           <div v-if="heatmap.length" class="heatmap-grid">
             <div class="heat-cell" v-for="kp in heatmap.slice(0,8)" :key="kp.knowledgeId"
-              :style="{background:kp.color,opacity:Math.min(0.3+kp.ratio/100,1)}">
+              :style="{background:kp.color,opacity:Math.min(0.35+kp.questionCount*0.08,1)}">
               <div class="heat-title">{{ kp.title }}</div>
               <div class="heat-stats">
                 <span>{{ kp.questionCount }}次提问</span>
