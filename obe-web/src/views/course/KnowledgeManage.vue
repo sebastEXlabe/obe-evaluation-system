@@ -1,5 +1,10 @@
 <template>
   <div class="kp-layout">
+    <el-alert type="info" :closable="false" show-icon style="margin-bottom:12px">
+      <template #title>
+        MaxKB 知识库（默认账号 <b>admin</b> / <b>MaxKB@123</b>，首次登录后自动记住）
+      </template>
+    </el-alert>
     <div class="kp-iframe-wrapper">
       <iframe src="/maxkb/" class="kp-iframe" title="MaxKB知识库管理" />
     </div>
