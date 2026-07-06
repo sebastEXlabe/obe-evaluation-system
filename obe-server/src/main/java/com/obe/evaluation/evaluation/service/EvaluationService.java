@@ -26,16 +26,6 @@ import java.util.stream.Collectors;
 
 /**
  * 多元评价服务 — 个人成绩计算引擎
- *
- * 核心功能：
- * 1. 个人贡献度计算（反搭便车算法） — calculateContributionRatio()
- * 2. 贝叶斯平滑处理 — 小样本时向先验分布(均等贡献)收缩
- * 3. 多源数据加权融合 — Git(35%) + 日志(20%) + 问答自测(25%) + 贡献加分(20%)
- * 4. 角色评价加分 — calculateBonus()
- *
- * 最终成绩公式：finalScore = groupTotalScore × contributionRatio + bonusTotal
- *
- * @see 论文第四章 4.1 贝叶斯平滑贡献度算法
  */
 @Slf4j
 @Service
@@ -57,7 +47,7 @@ public class EvaluationService {
      * 公式：最终成绩 = 小组成绩 × 贡献系数 + 个人加分
      * 步骤：
      *   1. 取该小组所有评价维度的均分作为小组总分
-     *   2. 通过 calculateContributionRatio() 计算个人贡献系数（反搭便车）
+     *   2. 通过 calculateContributionRatio() 计算个人贡献系数
      *   3. 通过 calculateBonus() 计算角色评价加分
      *   4. 组合计算并持久化到 personal_score 表
      */
@@ -137,7 +127,7 @@ public class EvaluationService {
     }
 
     /**
-     * 【核心算法】反搭便车贡献度计算
+     * 个人贡献度计算
      *
      * 多源数据加权融合：
      *   贡献分 = Git得分×0.35 + 日志得分×0.20 + (问答分+自测分)×0.25 + 贡献加分×0.20
@@ -150,7 +140,6 @@ public class EvaluationService {
      *   - 当数据稀疏时 → 向均等贡献收缩（宽容，避免误伤）
      *   - 当数据充足时 → 反映真实贡献差异（精准区分）
      *
-     * @see 论文第四章 4.1 贝叶斯平滑贡献度算法
      */
     private double calculateContributionRatio(Long userId, Long groupId) {
         List<GroupMember> members = memberMapper.selectList(
@@ -215,7 +204,7 @@ public class EvaluationService {
 
         if (maxScore <= 0) return 1.0;
 
-        // Bayesian smoothing
+        // 贝叶斯平滑
         int memberCount = members.size();
         double prior = 1.0 / memberCount;
         double C = 50;

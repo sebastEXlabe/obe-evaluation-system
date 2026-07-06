@@ -124,10 +124,6 @@ public class AchievementService {
 
             double objectiveAchievement = totalWeight > 0 ? weightedSum / totalWeight : 0;
             objectiveAchievement = Math.max(0, Math.min(1, objectiveAchievement));
-            // P0-2: 最小值法 = 该目标下所有指标点达成度的最小值
-            // 需要在循环外追踪：在indicator循环中记录minIndicatorAchievement
-            // 由于上面循环结构限制，这里用已计算的加权平均作为近似。实际最小值在AchievementService外部PO计算中使用。
-            // 达成度详情中增加"加权平均"标识
 
             // Save achievement result
             AchievementResult result = new AchievementResult();

@@ -361,7 +361,7 @@ public class AnalysisController {
                 mappedAchievements.add(ach);
             }
             double weightedAch = totalWeight > 0 ? weightedSum / totalWeight : 0;
-            // P0-1: 最小值法 — 该毕业要求对应的所有课程目标中取最小值
+            // 最小值法：取所有关联课程目标达成度的最小值
             double minAch = mappedAchievements.isEmpty() ? 0 : mappedAchievements.stream().min(Double::compare).orElse(0.0);
 
             poDetails.add(Map.of("requirementId", gr.getId(), "requirementNo", gr.getReqNo(),

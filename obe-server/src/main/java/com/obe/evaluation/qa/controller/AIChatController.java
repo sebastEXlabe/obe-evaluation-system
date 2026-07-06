@@ -500,7 +500,7 @@ public class AIChatController {
         ));
     }
 
-    // ========== 教师学情看板（P0-2） ==========
+    // ========== 教师学情看板 ==========
 
     @GetMapping("/heatmap")
     @Operation(summary = "薄弱知识点热力图数据")
