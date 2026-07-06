@@ -18,7 +18,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.*;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -30,6 +31,7 @@ import java.util.*;
 public class KnowledgePointController {
 
     private final KnowledgePointMapper knowledgePointMapper;
+    private final com.obe.evaluation.common.StorageService storageService;
 
     private boolean canModify() {
         var auth = SecurityContextHolder.getContext().getAuthentication();
@@ -100,9 +102,9 @@ public class KnowledgePointController {
         return R.ok(knowledgePointMapper.selectPage(new Page<>(q.getPage(), q.getSize()), wq));
     }
 
-    // ========== 附件 ==========
+    // ========== 附件 (MinIO) ==========
 
-    private static final String KP_UPLOAD_DIR = System.getProperty("user.dir") + "/uploads/knowledge/";
+    private static final String KP_BUCKET = "knowledge-points";
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @PostMapping("/{id}/upload")
@@ -112,12 +114,7 @@ public class KnowledgePointController {
         KnowledgePoint kp = knowledgePointMapper.selectById(id);
         if (kp == null) return R.fail(404, "知识点不存在");
         try {
-            Path uploadPath = Paths.get(KP_UPLOAD_DIR);
-            Files.createDirectories(uploadPath);
-            String ext = file.getOriginalFilename() != null && file.getOriginalFilename().contains(".")
-                ? file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf(".")) : "";
-            String storedName = UUID.randomUUID().toString() + ext;
-            file.transferTo(uploadPath.resolve(storedName).toFile());
+            String storedName = storageService.upload(KP_BUCKET, file);
 
             List<Map<String, Object>> atts = parseJson(kp.getAttachments());
             Map<String, Object> att = new LinkedHashMap<>();
@@ -127,9 +124,9 @@ public class KnowledgePointController {
             kp.setAttachments(toJson(atts));
             knowledgePointMapper.updateById(kp);
             return R.ok(Map.of("attachment", att, "totalAttachments", atts.size()));
-        } catch (IOException e) {
+        } catch (Exception e) {
             log.error("Upload failed: {}", e.getMessage());
-            return R.fail(500, "上传失败");
+            return R.fail(500, "上传失败: " + e.getMessage());
         }
     }
 
@@ -138,13 +135,26 @@ public class KnowledgePointController {
     public ResponseEntity<byte[]> downloadAttachment(@PathVariable Long id, @PathVariable String filename) throws IOException {
         KnowledgePoint kp = knowledgePointMapper.selectById(id);
         if (kp == null) return ResponseEntity.notFound().build();
-        Path filePath = Paths.get(KP_UPLOAD_DIR, filename);
-        if (!Files.exists(filePath)) return ResponseEntity.notFound().build();
-        byte[] content = Files.readAllBytes(filePath);
-        String ct = Files.probeContentType(filePath);
-        return ResponseEntity.ok()
-            .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
-            .body(content);
+        try {
+            InputStream is = storageService.download(KP_BUCKET, filename);
+            byte[] content = is.readAllBytes();
+            String originalName = filename;
+            List<Map<String, Object>> atts = parseJson(kp.getAttachments());
+            for (var att : atts) {
+                if (filename.equals(att.get("path"))) {
+                    originalName = (String) att.getOrDefault("name", filename);
+                    break;
+                }
+            }
+            return ResponseEntity.ok()
+                .contentType(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" +
+                    new String(originalName.getBytes(StandardCharsets.UTF_8), StandardCharsets.ISO_8859_1) + "\"")
+                .body(content);
+        } catch (Exception e) {
+            log.error("Download failed: {}", e.getMessage());
+            return ResponseEntity.notFound().build();
+        }
     }
 
     @DeleteMapping("/{id}/attachments/{filename}")
@@ -154,13 +164,16 @@ public class KnowledgePointController {
         KnowledgePoint kp = knowledgePointMapper.selectById(id);
         if (kp == null) return R.fail(404, "不存在");
         try {
-            Files.deleteIfExists(Paths.get(KP_UPLOAD_DIR, filename));
+            storageService.delete(KP_BUCKET, filename);
             List<Map<String, Object>> atts = parseJson(kp.getAttachments());
             atts.removeIf(a -> filename.equals(a.get("path")));
             kp.setAttachments(toJson(atts));
             knowledgePointMapper.updateById(kp);
             return R.ok();
-        } catch (IOException e) { return R.fail(500, "删除失败"); }
+        } catch (Exception e) {
+            log.error("Delete attachment failed: {}", e.getMessage());
+            return R.fail(500, "删除失败");
+        }
     }
 
     @SuppressWarnings("unchecked")
