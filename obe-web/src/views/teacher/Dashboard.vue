@@ -71,7 +71,7 @@
     <el-row :gutter="16" class="analytics-row" v-if="analytics">
       <el-col :span="12">
         <el-card header="🔍 知识点问题热力图">
-          <div ref="heatmapRef" v-show="heatmap.length" style="height:300px"></div>
+          <div ref="heatmapRef" style="height:300px" v-show="heatmap.length"></div>
           <el-empty v-if="!heatmap.length" description="暂无知识点提问数据" :image-size="40" />
         </el-card>
       </el-col>
@@ -171,7 +171,7 @@ async function loadAll() {
     groups.value = groupRes.data || []
     courses.value = courseRes.data || []
     heatmap.value = heatRes.data || []
-    nextTick(renderHeatmap)
+    setTimeout(renderHeatmap, 200)
     if (!selectedGroupId.value && groups.value.length > 0)
       selectedGroupId.value = groups.value[0].id
 
@@ -235,6 +235,7 @@ function renderHeatmap() {
   heatmapChart.legend(false)
   heatmapChart.interaction('element-active')
   heatmapChart.render()
+  console.log('Heatmap rendered with', data.length, 'items')
 }
 
 
