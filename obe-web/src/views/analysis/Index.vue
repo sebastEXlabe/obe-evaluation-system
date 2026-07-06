@@ -114,7 +114,9 @@
               </template>
             </el-table-column>
             <el-table-column prop="assigneeName" label="负责人" width="100" />
-            <el-table-column prop="deadline" label="截止日期" width="120" />
+            <el-table-column label="截止日期" width="120">
+                <template #default="{ row }">{{ (row.deadline || row.dueDate || '').substring(0, 10) }}</template>
+              </el-table-column>
           </el-table>
           <el-empty v-else description="暂无改进工单，点击上方按钮生成" :image-size="60" />
         </el-card>

@@ -528,7 +528,7 @@ public class AnalysisController {
 
         // Find group leader for auto-assignment
         String defaultAssignee = "";
-        String defaultAssigneeName = "";
+        String defaultAssigneeName = "未分配";
         try {
             var members = groupMemberMapper.selectList(
                 new LambdaQueryWrapper<com.obe.evaluation.group.entity.GroupMember>()
