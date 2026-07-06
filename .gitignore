@@ -8,9 +8,8 @@ dist/
 .idea/
 .vscode/
 *.iml
-uploads/
 temp/
 *.tmp
-
-# Docker
+.claude/
+.mcp.json
 obe-server/src/main/resources/static/
