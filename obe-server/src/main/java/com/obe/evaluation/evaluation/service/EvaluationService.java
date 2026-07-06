@@ -180,7 +180,7 @@ public class EvaluationService {
                             .eq(ProjectJournal::getGroupId, groupId));
             double journalScore = journals.size() * 15.0;
 
-            // AI问答活跃度（P0-1：主动学习参与度）
+            // 问答活跃度（主动学习参与度）
             long qaCount = qaRecordMapper.selectCount(
                     new LambdaQueryWrapper<QaRecord>().eq(QaRecord::getUserId, uid));
             List<SelfTestRecord> tests = selfTestMapper.selectList(

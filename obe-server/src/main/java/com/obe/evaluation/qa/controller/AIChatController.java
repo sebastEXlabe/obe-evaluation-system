@@ -1,7 +1,6 @@
 /**
- * AI智能问答控制器 — DeepSeek + MaxKB双通道
- * 职责：智能问答、AI出题批改、教师学情看板、测验管理
- * 学生提问自动关联课程知识库作为上下文
+ * 智能问答控制器
+ * 职责：智能问答、自动出题批改、学情看板、测验管理
  */
 package com.obe.evaluation.qa.controller;
 
@@ -43,7 +42,7 @@ import java.util.*;
 
 @Slf4j
 @RestController @RequestMapping("/api/ai-chat") @RequiredArgsConstructor
-@Tag(name = "AI智能问答（MaxKB）")
+@Tag(name = "智能问答")
 public class AIChatController {
 
     private final QaRecordMapper qaRecordMapper;

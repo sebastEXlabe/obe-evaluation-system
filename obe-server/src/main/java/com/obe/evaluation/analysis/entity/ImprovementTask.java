@@ -16,7 +16,7 @@ public class ImprovementTask {
     private String action;          // 改进措施
     private String priority;        // HIGH/MEDIUM/LOW
     private String assignee;        // 负责人用户ID
-    private String assigneeName;    // 负责人姓名（冗余字段，生成时填入）
+    private String assigneeName;    // 负责人姓名
     private String status;          // PENDING/IN_PROGRESS/DONE
     private LocalDateTime dueDate;
     @TableLogic(value = "0", delval = "1") private Integer deleted;

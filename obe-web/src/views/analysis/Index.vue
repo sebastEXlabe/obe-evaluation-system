@@ -52,8 +52,8 @@
       <el-col :span="9">
         <el-card shadow="never" style="height:100%">
           <template #header><span style="font-weight:bold">能力雷达图</span></template>
-          <v-chart v-if="achieveData" :option="radarOption" style="height:380px" autoresize />
-          <el-empty v-else description="暂无数据，请先选择小组并计算达成度" :image-size="100" />
+          <div ref="radarRef" v-show="achieveData" style="height:380px"></div>
+          <el-empty v-if="!achieveData" description="暂无数据，请先选择小组并计算达成度" :image-size="100" />
         </el-card>
       </el-col>
     </el-row>
@@ -147,16 +147,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, watch, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
-import VChart from 'vue-echarts'
-import { use } from 'echarts/core'
-import { RadarChart } from 'echarts/charts'
-import { TooltipComponent, LegendComponent } from 'echarts/components'
-import { CanvasRenderer } from 'echarts/renderers'
+import { Radar } from '@antv/g2plot'
 import http from '../../api/index.js'
-
-use([RadarChart, TooltipComponent, LegendComponent, CanvasRenderer])
 
 const loading = ref(false)
 const groups = ref([])
@@ -164,39 +158,37 @@ const groupId = ref(null)
 const overallAchievement = ref(null)
 const objectiveDetails = ref([])
 const achieveData = ref(null)
+const radarRef = ref(null)
+let radarInstance = null
 
 const ahpVisible = ref(false)
 const ahpResult = ref(null)
 const poData = ref(null)
 const improvementTasks = ref([])
 
-const radarOption = computed(() => {
-  if (!achieveData.value) return null
+function renderRadar() {
+  if (!achieveData.value || !radarRef.value) return
+  if (radarInstance) { radarInstance.destroy(); radarInstance = null }
   const dim = achieveData.value
-  return {
-    tooltip: { trigger: 'item' },
-    legend: { data: ['达成度'] },
-    radar: {
-      indicator: [
-        { name: '知识掌握', max: 1 },
-        { name: '工程实践能力', max: 1 },
-        { name: '综合素养', max: 1 }
-      ],
-      center: ['50%', '55%'],
-      radius: '70%'
-    },
-    series: [{
-      type: 'radar',
-      data: [{
-        value: [dim.knowledge || 0, dim.ability || 0, dim.quality || 0],
-        name: '达成度',
-        areaStyle: { color: 'rgba(64, 158, 255, 0.25)' },
-        lineStyle: { color: '#409eff', width: 2 },
-        itemStyle: { color: '#409eff' }
-      }]
-    }]
-  }
-})
+  const data = [
+    { name: '知识掌握', value: (dim.knowledge || 0) * 100, max: 100 },
+    { name: '工程实践能力', value: (dim.ability || 0) * 100, max: 100 },
+    { name: '综合素养', value: (dim.quality || 0) * 100, max: 100 },
+  ]
+  radarInstance = new Radar(radarRef.value, {
+    data,
+    xField: 'name',
+    yField: 'value',
+    meta: { value: { min: 0, max: 100 } },
+    area: { style: { fill: 'rgba(64, 158, 255, 0.15)' } },
+    point: { size: 3 },
+    legend: { visible: false },
+    theme: { colors10: ['#409eff'] },
+  })
+  radarInstance.render()
+}
+
+watch(achieveData, () => nextTick(renderRadar))
 
 onMounted(() => { loadGroups() })
 
