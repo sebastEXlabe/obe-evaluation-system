@@ -852,10 +852,10 @@ public class AIChatController {
         Map<String, Object> reqBody = new LinkedHashMap<>();
         reqBody.put("model", deepseekModel);
         reqBody.put("messages", List.of(
-            Map.of("role", "system", "content", "你是OBE-CDIO课程AI助手，专注于工程教育、成果导向教育(OBE)和CDIO教学理念。请用简洁中文回答，不超过500字。"),
+            Map.of("role", "system", "content", "你是OBE-CDIO课程AI助手，专注于工程教育、成果导向教育(OBE)和CDIO教学理念。请用中文回答。"),
             Map.of("role", "user", "content", question)
         ));
-        reqBody.put("max_tokens", 1000);
+        reqBody.put("max_tokens", 4096);
         reqBody.put("temperature", 0.7);
 
         String apiUrl = deepseekBaseUrl.endsWith("/") ? deepseekBaseUrl + "chat/completions" : deepseekBaseUrl + "/chat/completions";
