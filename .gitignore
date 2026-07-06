@@ -13,3 +13,4 @@ temp/
 .claude/
 .mcp.json
 obe-server/src/main/resources/static/
+obe-server/uploads/
