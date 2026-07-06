@@ -9,6 +9,6 @@ import Icon from './components/Icon.vue'
 const app = createApp(App)
 app.use(createPinia())
 app.use(router)
-app.use(ElementPlus)
+app.use(ElementPlus) // 去掉损坏的locale配置修复日期组件
 app.component('Icon', Icon)
 app.mount('#app')
