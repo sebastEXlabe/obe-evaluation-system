@@ -107,7 +107,7 @@
           <el-button type="primary" @click="openGitCommitDialog()">+ 添加提交记录</el-button>
         </div>
         <el-table :data="gitCommits" border stripe v-loading="loading">
-          <!-- 优先用API返回的userName（后端已解析），查不到再本地查找 -->
+          <!-- Git提交用户列：优先API返回userName（后端已解析），查不到再本地查找 -->
 <el-table-column label="用户" width="100"><template #default="{row}">{{ row.userName || userName(row.userId) }}</template></el-table-column>
           <el-table-column prop="message" label="提交信息" min-width="200" show-overflow-tooltip />
           <el-table-column prop="additions" label="+行数" width="80" />
