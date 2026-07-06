@@ -94,10 +94,13 @@
         <template #header>
           <div class="card-header-row">
             <span style="font-weight:bold">用户管理</span>
-            <el-button type="primary" @click="openUserCreateDialog">+ 创建用户</el-button>
+            <div style="display:flex;gap:8px">
+              <el-input v-model="userKeyword" placeholder="搜索用户..." style="width:200px" clearable size="small" />
+              <el-button type="primary" @click="openUserCreateDialog" size="small">+ 创建用户</el-button>
+            </div>
           </div>
         </template>
-        <el-table :data="userList" border stripe v-loading="tableLoading">
+        <el-table :data="filteredUserList" border stripe v-loading="tableLoading">
           <el-table-column prop="username" label="用户名" />
           <el-table-column prop="realName" label="姓名" />
           <el-table-column label="角色">
@@ -212,6 +215,14 @@ const studentAchievements = ref([])
 // 用户管理（管理员）
 const tableLoading = ref(false)
 const userList = ref([])
+const userKeyword = ref('')
+const filteredUserList = computed(() => {
+  if (!userKeyword.value) return userList.value
+  const kw = userKeyword.value.toLowerCase()
+  return userList.value.filter(u =>
+    (u.username||'').toLowerCase().includes(kw) || (u.realName||'').toLowerCase().includes(kw)
+  )
+})
 const userCreateVisible = ref(false)
 const userCreateForm = reactive({ username: '', password: '', realName: '', roleCode: 'STUDENT' })
 const roleVisible = ref(false)

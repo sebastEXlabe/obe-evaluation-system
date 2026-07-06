@@ -61,7 +61,8 @@ public class GroupController {
 
     @GetMapping
     @Operation(summary = "查询小组（按角色过滤：学生只看自己的组，教师看管理的组，管理员看全部）")
-    public R<List<Map<String, Object>>> listGroups(@RequestParam(required = false) Long courseId) {
+    public R<List<Map<String, Object>>> listGroups(@RequestParam(required = false) Long courseId,
+                                                    @RequestParam(required = false) String keyword) {
         List<ProjectGroup> groups;
         if (!isTeacherOrAdmin()) {
             // 学生：只显示自己所在的小组
@@ -74,16 +75,16 @@ public class GroupController {
             // 过滤已删除
             groups = groups.stream().filter(g -> g.getDeleted() == null || g.getDeleted() == 0).toList();
         } else if (isAdmin()) {
-            if (courseId != null) {
-                groups = groupService.list(new LambdaQueryWrapper<ProjectGroup>().eq(ProjectGroup::getCourseId, courseId));
-            } else {
-                groups = groupService.list();
-            }
+            var wq = new LambdaQueryWrapper<ProjectGroup>();
+            if (courseId != null) wq.eq(ProjectGroup::getCourseId, courseId);
+            if (keyword != null && !keyword.isBlank()) wq.like(ProjectGroup::getGroupName, keyword);
+            groups = groupService.list(wq);
         } else {
             // 教师：只看自己创建的小组
             Long userId = currentUserId();
             var wq = new LambdaQueryWrapper<ProjectGroup>().eq(ProjectGroup::getTeacherId, userId);
             if (courseId != null) wq.eq(ProjectGroup::getCourseId, courseId);
+            if (keyword != null && !keyword.isBlank()) wq.like(ProjectGroup::getGroupName, keyword);
             groups = groupService.list(wq);
         }
         List<Map<String, Object>> result = new ArrayList<>();

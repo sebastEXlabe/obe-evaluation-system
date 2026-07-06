@@ -4,6 +4,7 @@
       <el-select v-model="courseId" @change="loadGroups" placeholder="选择课程" style="width:220px" clearable>
         <el-option v-for="c in courses" :key="c.id" :label="c.courseName + ' (' + c.semester + ')'" :value="c.id" />
       </el-select>
+      <el-input v-model="keyword" @input="loadGroups" placeholder="搜索小组名称..." style="width:200px" clearable />
       <el-button type="primary" @click="openCreateDialog">+ 创建小组</el-button>
       <el-button @click="loadGroups">刷新</el-button>
     </div>
@@ -106,6 +107,7 @@ import http from '../../api/index.js'
 
 const courses = ref([])
 const courseId = ref(null)
+const keyword = ref('')
 const groups = ref([])
 const loading = ref(false)
 
@@ -130,8 +132,11 @@ onMounted(async () => {
 async function loadGroups() {
   loading.value = true
   try {
-    const params = courseId.value ? `?courseId=${courseId.value}` : ''
-    const { data } = await http.get(`/groups${params}`)
+    const params = new URLSearchParams()
+    if (courseId.value) params.append('courseId', courseId.value)
+    if (keyword.value) params.append('keyword', keyword.value)
+    const qs = params.toString()
+    const { data } = await http.get('/groups' + (qs ? '?' + qs : ''))
     groups.value = data || []
     await enrichGroupMemberCounts()
   } catch (e) { console.error(e) } finally { loading.value = false }
