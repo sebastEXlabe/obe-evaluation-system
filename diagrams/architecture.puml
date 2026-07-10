@@ -1,0 +1,91 @@
+@startuml
+' 图4-1 系统总体架构图
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Times New Roman
+skinparam defaultFontSize 10
+skinparam componentBorderColor #3C5488
+skinparam componentBackgroundColor #F5F7FA
+skinparam packageBorderColor #4DBBD5
+skinparam packageBackgroundColor #FFFFFF
+skinparam nodeBorderColor #00A087
+skinparam nodeBackgroundColor #F5FFFA
+skinparam databaseBorderColor #E64B35
+skinparam databaseBackgroundColor #FFF5F5
+skinparam arrowColor #666666
+
+title 系统总体架构图
+
+package "表现层" as PRES {
+  [浏览器] as Browser
+  [Nginx :80] as Nginx
+}
+
+package "前端 (obe-web)" as FRONT {
+  [Vue 3 + Element Plus] as Vue
+  [Pinia 状态管理] as Pinia
+  [Vue Router] as Router
+  [AntV G2 可视化] as G2
+}
+
+package "业务逻辑层 (obe-server :8989)" as BACK {
+  package "认证安全" as SEC {
+    [JWT 认证] as JWT
+    [Spring Security] as SecFilter
+    [Redis Token黑名单] as TokenBL
+  }
+  package "核心业务" as CORE {
+    [课程管理] as CourseMod
+    [小组管理] as GroupMod
+    [项目追踪] as ProjMod
+    [评价计算] as EvalMod
+    [达成度分析] as AnalysisMod
+  }
+  package "AI 模块" as AIM {
+    [DeepSeek API] as DeepSeekClient
+    [MaxKB 知识库] as MaxKBClient
+  }
+}
+
+package "数据层" as DATA {
+  database "PostgreSQL 16\n(pgvector)" as PG
+  database "Redis 7\n(缓存/黑名单)" as Redis
+  database "MinIO\n(文件存储)" as MinIO
+}
+
+package "外部服务" as EXT {
+  [DeepSeek V4\n大语言模型] as DeepSeekAPI
+  [MaxKB v2.10.3\n知识库引擎] as MaxKBSrv
+}
+
+Browser -down-> Nginx : HTTP
+Nginx -down-> Vue : 静态资源
+Nginx -down-> JWT : /api/*
+
+Vue -down-> Pinia
+Vue -down-> Router
+Vue -down-> G2
+
+JWT -down-> SecFilter
+SecFilter -down-> CourseMod
+SecFilter -down-> GroupMod
+SecFilter -down-> ProjMod
+SecFilter -down-> EvalMod
+SecFilter -down-> AnalysisMod
+
+CourseMod -down-> PG : MyBatis-Plus
+GroupMod -down-> PG
+ProjMod -down-> PG
+EvalMod -down-> PG
+AnalysisMod -down-> PG
+
+SecFilter -down-> TokenBL : 黑名单
+SecFilter -down-> Redis : 缓存
+
+CourseMod -down-> MinIO : 文件上传
+
+DeepSeekClient -down-> DeepSeekAPI : HTTPS
+MaxKBClient -down-> MaxKBSrv : HTTP
+
+Nginx -down-> MaxKBSrv : /admin/*
+
+@enduml

@@ -1,0 +1,157 @@
+@startuml
+' 图4-2 核心实体关系图 (仅显示主键和外键关系，完整字段见数据库表)
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Times New Roman
+skinparam defaultFontSize 9
+skinparam entityBorderColor #3C5488
+skinparam entityBackgroundColor #F5F7FA
+skinparam attributeFontSize 8
+
+entity "sys_user" as User {
+  * id : bigint <<PK>>
+  --
+  username : varchar
+  password : varchar
+  real_name : varchar
+  role_code : varchar
+}
+
+entity "course" as Course {
+  * id : bigint <<PK>>
+  --
+  name : varchar
+  code : varchar
+  semester : varchar
+}
+
+entity "course_objective" as Obj {
+  * id : bigint <<PK>>
+  --
+  objective_no : varchar
+  title : varchar
+  dimension : varchar
+  weight : numeric
+  * course_id : bigint <<FK>>
+}
+
+entity "graduation_requirement" as GR {
+  * id : bigint <<PK>>
+  --
+  code : varchar
+  title : varchar
+}
+
+entity "graduation_indicator" as GI {
+  * id : bigint <<PK>>
+  --
+  code : varchar
+  description : text
+  * gr_id : bigint <<FK>>
+  * objective_id : bigint <<FK>>
+}
+
+entity "evaluation_method" as EM {
+  * id : bigint <<PK>>
+  --
+  name : varchar
+  data_source : varchar
+  weight : numeric
+  max_score : numeric
+  * objective_id : bigint <<FK>>
+}
+
+entity "project_group" as Group {
+  * id : bigint <<PK>>
+  --
+  name : varchar
+  project_name : varchar
+  * course_id : bigint <<FK>>
+}
+
+entity "group_member" as Member {
+  * id : bigint <<PK>>
+  --
+  position : varchar
+  * user_id : bigint <<FK>>
+  * group_id : bigint <<FK>>
+}
+
+entity "group_evaluation" as GEval {
+  * id : bigint <<PK>>
+  --
+  requirement_score : numeric
+  design_score : numeric
+  code_score : numeric
+  test_score : numeric
+  doc_score : numeric
+  presentation_score : numeric
+  * group_id : bigint <<FK>>
+}
+
+entity "personal_score" as PScore {
+  * id : bigint <<PK>>
+  --
+  group_total_score : numeric
+  contribution_ratio : numeric
+  final_score : numeric
+  * user_id : bigint <<FK>>
+  * group_id : bigint <<FK>>
+}
+
+entity "achievement_result" as AR {
+  * id : bigint <<PK>>
+  --
+  achievement_value : numeric
+  dimension : varchar
+  * objective_id : bigint <<FK>>
+  * group_id : bigint <<FK>>
+}
+
+entity "qa_record" as QA {
+  * id : bigint <<PK>>
+  --
+  question : text
+  answer : text
+  resolved : boolean
+  * user_id : bigint <<FK>>
+  * knowledge_point_id : bigint <<FK>>
+}
+
+entity "project_milestone" as MS {
+  * id : bigint <<PK>>
+  --
+  name : varchar
+  cdio_phase : varchar
+  deadline : timestamp
+  * group_id : bigint <<FK>>
+}
+
+entity "git_commit_log" as Git {
+  * id : bigint <<PK>>
+  --
+  commit_hash : varchar
+  message : text
+  additions : integer
+  deletions : integer
+  * repo_config_id : bigint <<FK>>
+}
+
+' 关系
+Course ||--o{ Obj
+Obj ||--o{ GI
+GR ||--o{ GI
+Obj ||--o{ EM
+Obj ||--o{ AR
+Course ||--o{ Group
+Group ||--o{ Member
+User ||--o{ Member
+Group ||--o{ GEval
+User ||--o{ PScore
+Group ||--o{ PScore
+Group ||--o{ AR
+User ||--o{ QA
+Group ||--o{ MS
+Group ||--o{ Git
+Member ||--o{ Git
+
+@enduml

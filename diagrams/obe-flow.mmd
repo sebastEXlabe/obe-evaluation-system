@@ -1,0 +1,43 @@
+flowchart TB
+    Start(["课程开始"]) --> SetObjectives["设定课程目标<br/>KNOWLEDGE / ABILITY / QUALITY"]
+    SetObjectives --> AHP{"AHP 权重校验<br/>CR < 0.1?"}
+    AHP -->|"不通过"| AdjustWeights["调整两两比较矩阵"]
+    AdjustWeights --> AHP
+    AHP -->|"通过"| MapCO2PO["建立 CO→PO 映射矩阵<br/>H/M/L 支撑度"]
+    
+    MapCO2PO --> FormGroups["组建项目小组<br/>PM/DEV/TEST/DOC 岗位"]
+    FormGroups --> StartProject["启动 CDIO 项目<br/>C → D → I → O"]
+    
+    StartProject --> CollectData["多源数据采集"]
+    CollectData --> GitData["Git 提交记录<br/>Commit次数/增删行数"]
+    CollectData --> JournalData["项目日志<br/>每日/每周进展"]
+    CollectData --> QAData["AI 问答记录<br/>提问次数/知识点匹配"]
+    CollectData --> TestData["自测成绩<br/>正答率/完成时间"]
+    
+    GitData --> CalcContrib["计算个人贡献度"]
+    JournalData --> CalcContrib
+    QAData --> CalcContrib
+    TestData --> CalcContrib
+    
+    CalcContrib --> BayesSmooth["贝叶斯平滑<br/>r_i = (S_i + C*prior)/(S_max + C)"]
+    BayesSmooth --> PersonalScore["个人最终成绩<br/>= groupScore*r_i + bonus"]
+    
+    FormGroups --> GroupEval["小组评价<br/>6维度: REQ/DESIGN/CODE/TEST/DOC/PRESENTATION"]
+    FormGroups --> RoleEval["岗位专项评价<br/>差异化维度权重"]
+    
+    GroupEval --> CalcAchieve["计算课程目标达成度<br/>加权平均法"]
+    PersonalScore --> CalcAchieve
+    RoleEval --> CalcAchieve
+    
+    CalcAchieve --> CO2PO["CO→PO 毕业要求达成度<br/>最小值法: PO_j = Min{CO_k}"]
+    CO2PO --> Visualize["达成度可视化<br/>雷达图/柱状图/热力图"]
+    
+    Visualize --> CQI{"持续改进 CQI<br/>达成度 ≥ 0.6?"}
+    CQI -->|"否"| Improve["生成改进建议<br/>薄弱环节预警"]
+    Improve --> AdjustWeights
+    CQI -->|"是"| End(["课程结束"])
+    
+    style AHP fill:#ffe6cc,stroke:#d79b00
+    style BayesSmooth fill:#dae8fc,stroke:#6c8ebf
+    style CO2PO fill:#d5e8d4,stroke:#82b366
+    style CQI fill:#e1d5e7,stroke:#9673a6

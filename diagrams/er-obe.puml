@@ -1,0 +1,67 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Times New Roman
+skinparam defaultFontSize 10
+skinparam entityBorderColor #3C5488
+skinparam entityBackgroundColor #F5F7FA
+
+entity "course" as C {
+  * id <<PK>>
+  --
+  name
+  code
+  semester
+}
+
+entity "course_objective" as CO {
+  * id <<PK>>
+  --
+  * course_id <<FK>>
+  objective_no
+  title
+  dimension
+  weight
+}
+
+entity "graduation_requirement" as GR {
+  * id <<PK>>
+  --
+  code
+  title
+  description
+}
+
+entity "graduation_indicator" as GI {
+  * id <<PK>>
+  --
+  * gr_id <<FK>>
+  * objective_id <<FK>>
+  code
+  description
+}
+
+entity "evaluation_method" as EM {
+  * id <<PK>>
+  --
+  * objective_id <<FK>>
+  name
+  data_source
+  weight
+  max_score
+}
+
+entity "objective_requirement_mapping" as ORM {
+  * id <<PK>>
+  --
+  * objective_id <<FK>>
+  * requirement_id <<FK>>
+  support_level
+}
+
+C ||--o{ CO
+CO ||--o{ GI
+GR ||--o{ GI
+CO ||--o{ EM
+CO ||--o{ ORM
+GR ||--o{ ORM
+@enduml

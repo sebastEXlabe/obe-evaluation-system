@@ -1,0 +1,60 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Times New Roman
+skinparam defaultFontSize 10
+skinparam entityBorderColor #3C5488
+skinparam entityBackgroundColor #F5F7FA
+
+entity "knowledge_point" as KP {
+  * id <<PK>>
+  --
+  * objective_id <<FK>>
+  name
+  description
+  chapter
+}
+
+entity "qa_record" as QA {
+  * id <<PK>>
+  --
+  * user_id <<FK>>
+  * knowledge_point_id <<FK>>
+  question
+  answer
+  resolved
+}
+
+entity "quiz" as QZ {
+  * id <<PK>>
+  --
+  * objective_id <<FK>>
+  * creator_id <<FK>>
+  title
+  question_count
+  status
+}
+
+entity "question_answer" as QNA {
+  * id <<PK>>
+  --
+  * quiz_id <<FK>>
+  question_text
+  question_type
+  correct_answer
+  score
+}
+
+entity "self_test_record" as ST {
+  * id <<PK>>
+  --
+  * user_id <<FK>>
+  * quiz_id <<FK>>
+  total_score
+  correct_count
+  completed_at
+}
+
+KP ||--o{ QA
+QZ ||--o{ QNA
+QZ ||--o{ ST
+@enduml

@@ -1,0 +1,47 @@
+erDiagram
+    COURSE ||--o{ COURSE_OBJECTIVE : 包含
+    COURSE_OBJECTIVE ||--o{ GRADUATION_INDICATOR : 分解为
+    COURSE_OBJECTIVE ||--o{ OBJECTIVE_REQUIREMENT_MAPPING : 映射
+    GRADUATION_REQUIREMENT ||--o{ OBJECTIVE_REQUIREMENT_MAPPING : 映射
+    GRADUATION_INDICATOR ||--o{ EVALUATION_METHOD : 评价方式
+
+    COURSE {
+        bigint id PK
+        varchar course_name
+        varchar semester
+        bigint teacher_id FK
+    }
+    COURSE_OBJECTIVE {
+        bigint id PK
+        varchar objective_no
+        varchar title
+        varchar dimension
+        numeric weight
+        bigint course_id FK
+    }
+    GRADUATION_REQUIREMENT {
+        bigint id PK
+        varchar req_no
+        varchar title
+        text description
+    }
+    GRADUATION_INDICATOR {
+        bigint id PK
+        varchar indicator_no
+        varchar title
+        bigint objective_id FK
+    }
+    OBJECTIVE_REQUIREMENT_MAPPING {
+        bigint id PK
+        bigint objective_id FK
+        bigint requirement_id FK
+        varchar support_level
+    }
+    EVALUATION_METHOD {
+        bigint id PK
+        varchar method_name
+        numeric weight
+        varchar data_source
+        numeric full_score
+        bigint indicator_id FK
+    }

@@ -1,0 +1,26 @@
+graph TB
+    User["用户浏览器"] -->|":80"| Web
+
+    subgraph Docker["Docker 宿主机"]
+        Web["obe-web<br/>nginx :80"]
+        Server["obe-server<br/>Spring Boot :8989"]
+        PG["obe-postgres<br/>PostgreSQL 16 :5432"]
+        Redis["obe-redis<br/>Redis 7 :6379"]
+        MinIO["obe-minio<br/>MinIO :9000"]
+        MaxKB["obe-maxkb<br/>MaxKB :8080"]
+    end
+
+    Web -->|"/api/"| Server
+    Web -->|"/admin/"| MaxKB
+    Server --> PG
+    Server --> Redis
+    Server --> MinIO
+    Server --> MaxKB
+    Server -->|HTTPS| DeepSeek
+
+    DeepSeek["DeepSeek API"]
+
+    style User fill:#E8F5E9,stroke:#00A087
+    style Web fill:#FFF3E0,stroke:#F4A261
+    style Server fill:#FFF3E0,stroke:#F4A261
+    style DeepSeek fill:#E3F2FD,stroke:#4DBBD5

@@ -1,0 +1,15 @@
+graph TB
+    GitData["Git 提交数据"] --> RawScore["计算原始贡献分 S_i<br/>0.35×Git + 0.20×日志<br/>+ 0.25×问答+自测 + 0.20×加分"]
+    JourData["项目日志数据"] --> RawScore
+    QAData["AI 问答数据"] --> RawScore
+    TestData["自测成绩数据"] --> RawScore
+    
+    RawScore --> FindMax["找到小组最高分 S_max"]
+    FindMax --> Bayes["贝叶斯平滑<br/>r_i = S_i + C×prior / S_max + C<br/>prior = 1/n, C = 50"]
+    Bayes --> Check{"r_i 是否异常?"}
+    Check -->|否| Final["最终成绩<br/>Score = Score_group × r_i + Bonus"]
+    Check -->|是| Flag["标记人工审核"]
+    Final --> Persist["持久化存储<br/>personal_score 表"]
+    
+    style Bayes fill:#DAE8FC,stroke:#6C8EBF
+    style Final fill:#D5E8D4,stroke:#82B366

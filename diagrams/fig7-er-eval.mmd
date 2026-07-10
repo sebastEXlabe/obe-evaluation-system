@@ -1,0 +1,42 @@
+erDiagram
+    PROJECT_GROUP ||--o{ GROUP_EVALUATION : 小组评分
+    PROJECT_GROUP ||--o{ PERSONAL_SCORE : 个人成绩
+    PROJECT_GROUP ||--o{ ROLE_EVALUATION : 角色评价
+    SYS_USER ||--o{ PERSONAL_SCORE : 得分
+    SYS_USER ||--o{ ROLE_EVALUATION : 被评
+    PERSONAL_SCORE ||--o{ SCORE_DISPUTE : 申诉
+
+    GROUP_EVALUATION {
+        bigint id PK
+        bigint group_id FK
+        bigint evaluator_id FK
+        varchar dimension
+        numeric score
+        text comment
+    }
+    PERSONAL_SCORE {
+        bigint id PK
+        bigint user_id FK
+        bigint group_id FK
+        numeric group_total_score
+        numeric contribution_ratio
+        numeric final_score
+        numeric bonus_total
+    }
+    ROLE_EVALUATION {
+        bigint id PK
+        bigint user_id FK
+        bigint group_id FK
+        bigint evaluator_id FK
+        varchar role_code
+        varchar dimension
+        numeric score
+    }
+    SCORE_DISPUTE {
+        bigint id PK
+        bigint user_id FK
+        bigint score_id
+        varchar score_type
+        text reason
+        varchar status
+    }

@@ -1,0 +1,44 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Times New Roman
+skinparam defaultFontSize 10
+skinparam entityBorderColor #3C5488
+skinparam entityBackgroundColor #F5F7FA
+
+entity "project_group" as G {
+  * id <<PK>>
+  --
+  * course_id <<FK>>
+  name
+  project_name
+}
+
+entity "group_member" as GM {
+  * id <<PK>>
+  --
+  * user_id <<FK>>
+  * group_id <<FK>>
+  position
+  joined_at
+}
+
+entity "position_history" as PH {
+  * id <<PK>>
+  --
+  * member_id <<FK>>
+  old_position
+  new_position
+  changed_at
+}
+
+entity "position_criteria" as PC {
+  * id <<PK>>
+  --
+  position_code
+  criteria_name
+  weight
+}
+
+G ||--o{ GM
+GM ||--o{ PH
+@enduml

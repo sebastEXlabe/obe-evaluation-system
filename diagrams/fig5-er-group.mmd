@@ -1,0 +1,29 @@
+erDiagram
+    PROJECT_GROUP ||--o{ GROUP_MEMBER : 成员
+    GROUP_MEMBER ||--o{ POSITION_HISTORY : 变更记录
+    SYS_USER ||--o{ GROUP_MEMBER : 参与
+
+    PROJECT_GROUP {
+        bigint id PK
+        varchar group_name
+        bigint teacher_id FK
+        int max_members
+        varchar invite_code
+        bigint course_id FK
+    }
+    GROUP_MEMBER {
+        bigint id PK
+        bigint group_id FK
+        bigint user_id FK
+        varchar role_code
+        timestamp join_at
+    }
+    POSITION_HISTORY {
+        bigint id PK
+        bigint group_id FK
+        bigint user_id FK
+        varchar old_role
+        varchar new_role
+        bigint changed_by FK
+        varchar reason
+    }

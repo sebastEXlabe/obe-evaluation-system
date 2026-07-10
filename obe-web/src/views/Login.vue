@@ -1,7 +1,7 @@
 <template>
   <div class="login-page">
     <el-card class="login-card">
-      <template #header><h2 style="text-align:center;margin:0">OBE-CDIO 教学评价管理系统</h2></template>
+      <template #header><h2 style="text-align:center;margin:0">基于AHP的OBE-CDIO软件工程课程评价系统</h2></template>
       <el-form :model="form" label-width="0" @keyup.enter="doLogin">
         <el-form-item><el-input v-model="form.username" placeholder="用户名" clearable /></el-form-item>
         <el-form-item><el-input v-model="form.password" type="password" placeholder="密码" show-password clearable /></el-form-item>

@@ -1,0 +1,31 @@
+@startuml
+' 图5-2 AHP权重校验算法流程
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Times New Roman
+skinparam defaultFontSize 10
+skinparam activityBorderColor #3C5488
+skinparam activityBackgroundColor #F5F7FA
+skinparam startColor #00A087
+skinparam endColor #E64B35
+skinparam diamondBackgroundColor #FFF8E1
+skinparam diamondBorderColor #E69F00
+
+start
+:输入 n×n 两两比较矩阵 A;
+
+:列归一化——对每列 j\nnorm[i][j] = A[i][j] / colSum[j];
+
+:计算权重向量——行平均\nw[i] = avg(norm[i]);
+
+:计算最大特征值\nAw = A × w\nλmax = mean(Aw[i]/w[i]);
+
+:一致性检验\nCI = (λmax-n)/(n-1)\nCR = CI / RI(n);
+
+if (CR < 0.1?) then (是)
+  :通过检验\n保存权重向量;
+else (否)
+  :未通过\n提示教师调整矩阵;
+endif
+
+stop
+@enduml

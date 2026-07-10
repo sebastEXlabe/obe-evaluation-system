@@ -1,8 +1,8 @@
 <template>
   <div class="docs-page">
     <div class="docs-header">
-      <h1>OBE-CDIO 教学评价管理系统 — 使用文档</h1>
-      <p class="docs-subtitle">基于 OBE 成果导向教育理念与 CDIO 工程教育模式的综合教学评价平台</p>
+      <h1>基于AHP的OBE-CDIO软件工程课程评价系统 — 使用文档</h1>
+      <p class="docs-subtitle">融合 AHP 层次分析法、OBE 成果导向与 CDIO 工程教育模式的软件工程课程教学评价平台</p>
     </div>
 
     <el-collapse v-model="activeSections" class="docs-collapse">

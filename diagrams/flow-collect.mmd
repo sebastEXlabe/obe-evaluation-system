@@ -1,0 +1,19 @@
+graph TB
+    Start([课程开始]) --> SetObj[设定课程目标<br/>KNOWLEDGE/ABILITY/QUALITY]
+    SetObj --> AHP{AHP 一致性校验<br/>CR < 0.1?}
+    AHP -->|不通过| Adjust[调整判断矩阵]
+    Adjust --> AHP
+    AHP -->|通过| Map[建立 CO-PO 映射]
+    Map --> Form[组建小组<br/>分配 PM/DEV/TEST/DOC]
+    Form --> StartCDIO[启动 CDIO 项目]
+
+    StartCDIO --> GitChan[Git 提交采集<br/>Commit + 增删行]
+    StartCDIO --> JourChan[项目日志采集<br/>每日/每周进展]
+    StartCDIO --> QAChan[AI 问答采集<br/>提问次数+知识点]
+    StartCDIO --> TestChan[自测成绩采集<br/>正答率+完成时间]
+
+    style AHP fill:#FFF8E1,stroke:#E69F00
+    style GitChan fill:#E8F5E9,stroke:#00A087
+    style JourChan fill:#E8F5E9,stroke:#00A087
+    style QAChan fill:#E8F5E9,stroke:#00A087
+    style TestChan fill:#E8F5E9,stroke:#00A087

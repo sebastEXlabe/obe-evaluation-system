@@ -1,0 +1,71 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Times New Roman
+skinparam defaultFontSize 10
+skinparam entityBorderColor #3C5488
+skinparam entityBackgroundColor #F5F7FA
+
+entity "project_group" as G {
+  * id <<PK>>
+  --
+  name
+}
+
+entity "group_evaluation" as GE {
+  * id <<PK>>
+  --
+  * group_id <<FK>>
+  * evaluator_id <<FK>>
+  requirement_score
+  design_score
+  code_score
+  test_score
+  doc_score
+  presentation_score
+}
+
+entity "role_evaluation" as RE {
+  * id <<PK>>
+  --
+  * member_id <<FK>>
+  * evaluator_id <<FK>>
+  criteria_scores
+  total_score
+}
+
+entity "personal_score" as PS {
+  * id <<PK>>
+  --
+  * user_id <<FK>>
+  * group_id <<FK>>
+  group_total_score
+  contribution_ratio
+  final_score
+  bonus_total
+}
+
+entity "score_dispute" as SD {
+  * id <<PK>>
+  --
+  * score_id <<FK>>
+  * student_id <<FK>>
+  reason
+  status
+  resolution
+}
+
+entity "achievement_result" as AR {
+  * id <<PK>>
+  --
+  * objective_id <<FK>>
+  * group_id <<FK>>
+  achievement_value
+  dimension
+  calc_round
+}
+
+G ||--o{ GE
+G ||--o{ PS
+G ||--o{ AR
+PS ||--o{ SD
+@enduml

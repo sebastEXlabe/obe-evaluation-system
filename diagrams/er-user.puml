@@ -1,0 +1,40 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Times New Roman
+skinparam defaultFontSize 10
+skinparam entityBorderColor #3C5488
+skinparam entityBackgroundColor #F5F7FA
+
+entity "sys_user" as U {
+  * id <<PK>>
+  --
+  username
+  password
+  real_name
+  email
+  role_code
+}
+
+entity "audit_log" as AL {
+  * id <<PK>>
+  --
+  * user_id <<FK>>
+  action
+  target
+  ip
+  created_at
+}
+
+entity "notification" as NF {
+  * id <<PK>>
+  --
+  * user_id <<FK>>
+  title
+  content
+  is_read
+  created_at
+}
+
+U ||--o{ AL
+U ||--o{ NF
+@enduml

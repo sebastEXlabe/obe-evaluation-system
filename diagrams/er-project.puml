@@ -1,0 +1,88 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Times New Roman
+skinparam defaultFontSize 10
+skinparam entityBorderColor #3C5488
+skinparam entityBackgroundColor #F5F7FA
+
+entity "project_group" as G {
+  * id <<PK>>
+  --
+  name
+}
+
+entity "project_milestone" as MS {
+  * id <<PK>>
+  --
+  * group_id <<FK>>
+  name
+  cdio_phase
+  deadline
+  status
+}
+
+entity "project_task" as PT {
+  * id <<PK>>
+  --
+  * milestone_id <<FK>>
+  * assignee_id <<FK>>
+  title
+  status
+  priority
+}
+
+entity "project_journal" as PJ {
+  * id <<PK>>
+  --
+  * user_id <<FK>>
+  * group_id <<FK>>
+  content
+  created_at
+}
+
+entity "repo_config" as RC {
+  * id <<PK>>
+  --
+  * group_id <<FK>>
+  platform
+  repo_url
+  branch
+}
+
+entity "git_commit_log" as GC {
+  * id <<PK>>
+  --
+  * repo_config_id <<FK>>
+  * member_id <<FK>>
+  commit_hash
+  message
+  additions
+  deletions
+}
+
+entity "contribution_log" as CL {
+  * id <<PK>>
+  --
+  * user_id <<FK>>
+  * group_id <<FK>>
+  score_type
+  score_value
+}
+
+entity "requirement_change" as RCH {
+  * id <<PK>>
+  --
+  * group_id <<FK>>
+  change_type
+  description
+  reason
+}
+
+G ||--o{ MS
+MS ||--o{ PT
+G ||--o{ PJ
+G ||--o{ RC
+RC ||--o{ GC
+G ||--o{ CL
+G ||--o{ RCH
+@enduml

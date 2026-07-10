@@ -1,0 +1,46 @@
+graph TB
+    Browser(["用户浏览器"])
+    Browser --> Nginx["Nginx :80<br/>静态资源 + API代理 + MaxKB代理"]
+
+    subgraph Frontend["前端 obe-web"]
+        direction LR
+        Vue["Vue 3 + Element Plus"]
+        Pinia["Pinia 状态管理"]
+        G2["AntV G2 可视化"]
+    end
+
+    Nginx --> Frontend
+    Nginx -->|"/api/*"| Backend
+
+    subgraph Backend["后端 obe-server :8989"]
+        Security["Spring Security + JWT 认证"]
+        direction LR
+        M1["认证授权"]
+        M2["课程管理"]
+        M3["小组管理"]
+        M4["项目追踪"]
+        M5["多元评价"]
+        M6["达成度分析"]
+        M7["AI模块"]
+    end
+
+    Backend --> Data
+
+    subgraph Data["数据层"]
+        PG[("PostgreSQL 16<br/>pgvector")]
+        Redis[("Redis 7")]
+        MinIO[("MinIO")]
+    end
+
+    Nginx -->|"/admin/*"| MaxKB
+    M7 --> DeepSeek
+    M7 --> MaxKB
+
+    subgraph External["外部服务"]
+        DeepSeek["DeepSeek API"]
+        MaxKB["MaxKB v2.10.3"]
+    end
+
+    style Browser fill:#E8F5E9,stroke:#00A087
+    style Nginx fill:#FFF3E0,stroke:#F4A261
+    style DeepSeek fill:#E3F2FD,stroke:#4DBBD5

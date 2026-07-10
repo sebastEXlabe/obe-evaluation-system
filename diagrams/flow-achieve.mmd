@@ -1,0 +1,20 @@
+graph TB
+    EvalData["评价数据汇总"] --> COCalc["课程目标达成度<br/>加权平均法<br/>A = Σ a_i·w_i / Σ w_i"]
+    COCalc --> DimCalc["维度分数汇总<br/>KNOWLEDGE/ABILITY/QUALITY"]
+    COCalc --> POCalc["CO→PO 映射<br/>PO_j = min{CO_k}"]
+    
+    DimCalc --> Radar["达成度雷达图"]
+    POCalc --> BarChart["毕业要求柱状图"]
+    COCalc --> Heatmap["达成度热力图"]
+    
+    Radar --> CQI{"达成度 ≥ 0.6?"}
+    BarChart --> CQI
+    Heatmap --> CQI
+    
+    CQI -->|否| Improve["生成改进建议<br/>薄弱环节预警<br/>教学策略调整"]
+    Improve --> Back["反馈至下轮课程"]
+    CQI -->|是| End([课程结束])
+    
+    style CQI fill:#E1D5E7,stroke:#9673A6
+    style COCalc fill:#DAE8FC,stroke:#6C8EBF
+    style POCalc fill:#DAE8FC,stroke:#6C8EBF

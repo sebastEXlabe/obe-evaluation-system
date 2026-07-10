@@ -1,0 +1,24 @@
+erDiagram
+    SYS_USER ||--o{ AUDIT_LOG : 操作
+    SYS_USER ||--o{ NOTIFICATION : 接收
+    SYS_USER {
+        bigint id PK
+        varchar username
+        varchar password
+        varchar real_name
+        varchar role_code
+    }
+    AUDIT_LOG {
+        bigint id PK
+        bigint user_id FK
+        varchar action
+        varchar target
+        timestamp created_at
+    }
+    NOTIFICATION {
+        bigint id PK
+        bigint user_id FK
+        varchar title
+        text content
+        boolean is_read
+    }

@@ -1,0 +1,56 @@
+graph LR
+    Admin[管理员] --> UC1[用户管理]
+    Admin --> UC2[课程管理]
+    
+    Teacher[教师] --> UC3[课程目标设定]
+    Teacher --> UC4[AHP权重校验]
+    Teacher --> UC5[CO-PO映射]
+    Teacher --> UC6[小组创建与分配]
+    Teacher --> UC7[岗位变更管理]
+    Teacher --> UC8[里程碑与任务]
+    Teacher --> UC9[Git提交同步]
+    Teacher --> UC10[小组评分]
+    Teacher --> UC11[贡献度计算]
+    Teacher --> UC12[岗位评价]
+    Teacher --> UC13[达成度分析]
+    
+    Student[学生] --> UC14[任务查看]
+    Student --> UC15[Git提交同步]
+    Student --> UC16[贡献度查看]
+    Student --> UC17[达成度查看]
+    Student --> UC18[智能问答]
+    Student --> UC19[自测练习]
+
+    subgraph 用户与认证
+        UC1
+    end
+    subgraph 课程与OBE管理
+        UC2
+        UC3
+        UC4
+        UC5
+    end
+    subgraph 小组与项目管理
+        UC6
+        UC7
+        UC8
+        UC9
+    end
+    subgraph 多元评价
+        UC10
+        UC11
+        UC12
+    end
+    subgraph 达成度分析
+        UC13
+        UC16
+        UC17
+    end
+    subgraph AI辅助
+        UC18
+        UC19
+    end
+
+    style Admin fill:#E8EAF6,stroke:#3C5488
+    style Teacher fill:#E8EAF6,stroke:#3C5488
+    style Student fill:#E8EAF6,stroke:#3C5488

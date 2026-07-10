@@ -1,0 +1,44 @@
+graph TB
+    subgraph 表现层["表现层 Presentation"]
+        Browser["浏览器 Browser"]
+        Nginx["Nginx :80<br/>静态资源 + API 代理 + MaxKB 代理"]
+    end
+
+    subgraph 前端["前端 obe-web"]
+        Vue["Vue 3 + Element Plus<br/>Pinia 状态管理"]
+        Router["Vue Router Hash模式"]
+        Views["教师工作台 | 课程管理 | 小组管理<br/>项目追踪 | 多元评价 | 达成度分析<br/>AI问答 | 自测 | 系统设置"]
+    end
+
+    subgraph 后端["后端 obe-server :8989"]
+        SpringBoot["Spring Boot 3.4.1"]
+        Security["Spring Security + JWT 认证"]
+        Modules["核心业务模块"]
+        Auth["认证模块"] --> CourseModule["课程模块"]
+        Auth --> GroupModule["小组模块"]
+        Auth --> ProjectModule["项目模块"]
+        EvalModule["评价模块"] --> AnalysisModule["分析模块"]
+        AIModule["AI模块"] --> DeepSeekAPI["DeepSeek API"]
+        AIModule --> MaxKBAPI["MaxKB 知识库"]
+    end
+
+    subgraph 数据层["数据层"]
+        PostgreSQL["PostgreSQL 16<br/>pgvector 向量扩展<br/>34张业务表"]
+        Redis["Redis 7<br/>Token黑名单 / 缓存"]
+        MinIO["MinIO<br/>文件存储"]
+    end
+
+    subgraph 外部服务["外部服务"]
+        DeepSeek["DeepSeek V4<br/>大语言模型"]
+        MaxKB["MaxKB v2.10.3<br/>Django + PostgreSQL<br/>知识库引擎"]
+    end
+
+    Browser --> Nginx
+    Nginx -->|"/api/"| SpringBoot
+    Nginx -->|"/admin/"| MaxKB
+    Nginx -->|静态资源| Vue
+    SpringBoot --> PostgreSQL
+    SpringBoot --> Redis
+    SpringBoot --> MinIO
+    SpringBoot --> DeepSeek
+    SpringBoot --> MaxKB

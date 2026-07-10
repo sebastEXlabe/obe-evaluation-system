@@ -1,0 +1,44 @@
+@startuml
+' 图5-1 贝叶斯平滑贡献度算法流程
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Times New Roman
+skinparam defaultFontSize 10
+skinparam activityBorderColor #3C5488
+skinparam activityBackgroundColor #F5F7FA
+skinparam startColor #00A087
+skinparam endColor #E64B35
+skinparam diamondBackgroundColor #FFF8E1
+skinparam diamondBorderColor #E69F00
+
+start
+:获取小组成员列表;
+
+:采集四通道过程性数据;
+
+fork
+  :Git提交\n(次数+增删行)|
+fork again
+  :项目日志\n(提交数量)|
+fork again
+  :AI问答\n(提问次数)|
+fork again
+  :自测成绩\n(正答率)|
+end fork
+
+:计算原始贡献分 S_i\n0.35×Git + 0.20×日志\n+ 0.25×(问答+自测) + 0.20×加分;
+
+:找到小组最高分 S_max;
+
+:贝叶斯平滑\nr_i = (S_i + C×prior)/(S_max + C)\nprior=1/n, C=50;
+
+if (r_i 异常?) then (是)
+  :标记人工审核;
+else (否)
+endif
+
+:计算最终成绩\nScore = Score_group×r_i + Score_bonus;
+
+:持久化存储并触发达成度重算;
+
+stop
+@enduml

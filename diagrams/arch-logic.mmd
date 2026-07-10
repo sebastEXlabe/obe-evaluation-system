@@ -1,0 +1,57 @@
+graph TB
+    Browser(["用户浏览器"])
+    
+    Browser --> Nginx["Nginx :80 统一入口<br/>静态资源 / API代理 / MaxKB代理"]
+
+    Nginx --> Frontend
+
+    subgraph Frontend["前端 obe-web"]
+        direction LR
+        Vue["Vue 3 + Element Plus"]
+        Pinia["Pinia 状态管理"]
+        G2["AntV G2 可视化"]
+    end
+
+    Nginx -->|"/api/*"| SpringBoot
+
+    subgraph Backend["后端 obe-server :8989"]
+        SpringBoot["Spring Boot 3.4.1"]
+        MyBatis["MyBatis-Plus 3.5.9 ORM"]
+        Security["Spring Security + JWT 认证"]
+        
+        SpringBoot --> Security
+        Security --> Modules
+        
+        subgraph Modules["核心业务模块"]
+            direction LR
+            M1["认证授权"]
+            M2["课程管理"]
+            M3["小组管理"]
+            M4["项目追踪"]
+            M5["多元评价"]
+            M6["达成度分析"]
+            M7["AI智能问答"]
+        end
+    end
+
+    MyBatis --> PG
+    
+    subgraph Data["数据存储"]
+        PG[("PostgreSQL 16<br/>pgvector扩展")]
+        Redis[("Redis 7<br/>Token黑名单")]
+        MinIO[("MinIO<br/>文件存储")]
+    end
+
+    Nginx -->|"/admin/*"| MaxKB
+    
+    subgraph External["外部服务"]
+        DeepSeek["DeepSeek 大语言模型 API"]
+        MaxKB["MaxKB v2.10.3 知识库"]
+    end
+
+    M7 --> DeepSeek
+    M7 --> MaxKB
+
+    style Browser fill:#E8F5E9,stroke:#00A087
+    style Nginx fill:#FFF3E0,stroke:#F4A261
+    style DeepSeek fill:#E3F2FD,stroke:#4DBBD5

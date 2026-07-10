@@ -1,0 +1,92 @@
+erDiagram
+    SYS_USER ||--o{ GROUP_MEMBER : "参与"
+    SYS_USER ||--o{ PERSONAL_SCORE : "得分"
+    SYS_USER ||--o{ QA_RECORD : "提问"
+    SYS_USER ||--o{ SELF_TEST_RECORD : "自测"
+    SYS_USER ||--o{ PROJECT_JOURNAL : "撰写"
+    SYS_USER ||--o{ AUDIT_LOG : "操作"
+
+    COURSE ||--o{ COURSE_OBJECTIVE : "包含"
+    COURSE_OBJECTIVE ||--o{ GRADUATION_INDICATOR : "分解为"
+    COURSE_OBJECTIVE ||--o{ OBJECTIVE_REQUIREMENT_MAPPING : "映射"
+    COURSE_OBJECTIVE ||--o{ EVALUATION_METHOD : "评价方式"
+    COURSE_OBJECTIVE ||--o{ ACHIEVEMENT_RESULT : "达成度"
+
+    GRADUATION_REQUIREMENT ||--o{ GRADUATION_INDICATOR : "包含"
+    GRADUATION_REQUIREMENT ||--o{ OBJECTIVE_REQUIREMENT_MAPPING : "映射"
+
+    PROJECT_GROUP ||--o{ GROUP_MEMBER : "成员"
+    PROJECT_GROUP ||--o{ GROUP_EVALUATION : "小组评价"
+    PROJECT_GROUP ||--o{ PERSONAL_SCORE : "个人成绩"
+    PROJECT_GROUP ||--o{ ACHIEVEMENT_RESULT : "达成度"
+
+    PROJECT_GROUP ||--o{ PROJECT_MILESTONE : "里程碑"
+    PROJECT_MILESTONE ||--o{ PROJECT_TASK : "任务"
+    PROJECT_GROUP ||--o{ CONTRIBUTION_LOG : "贡献记录"
+    PROJECT_GROUP ||--o{ REQUIREMENT_CHANGE : "需求变更"
+
+    GROUP_MEMBER ||--o{ POSITION_HISTORY : "岗位历史"
+    GROUP_MEMBER ||--o{ ROLE_EVALUATION : "角色评价"
+
+    COURSE_OBJECTIVE ||--o{ QUIZ : "题库"
+    COURSE_OBJECTIVE ||--o{ KNOWLEDGE_POINT : "知识点"
+    KNOWLEDGE_POINT ||--o{ QA_RECORD : "关联"
+
+    PROJECT_GROUP ||--o{ REPO_CONFIG : "Git仓库"
+    REPO_CONFIG ||--o{ GIT_COMMIT_LOG : "Commit记录"
+
+    SYS_USER {
+        bigint id PK
+        varchar username "用户名"
+        varchar password "BCrypt加密"
+        varchar real_name "真实姓名"
+        varchar email "邮箱"
+        varchar role_code "角色: ADMIN/TEACHER/STUDENT"
+    }
+
+    COURSE {
+        bigint id PK
+        varchar name "课程名称"
+        varchar code "课程代码"
+        varchar semester "学期"
+    }
+
+    COURSE_OBJECTIVE {
+        bigint id PK
+        varchar objective_no "目标编号"
+        varchar title "目标名称"
+        varchar dimension "KNOWLEDGE/ABILITY/QUALITY"
+        numeric weight "权重"
+        bigint course_id FK
+    }
+
+    PROJECT_GROUP {
+        bigint id PK
+        varchar name "小组名称"
+        varchar project_name "项目名称"
+        bigint course_id FK
+    }
+
+    GROUP_MEMBER {
+        bigint id PK
+        bigint user_id FK
+        bigint group_id FK
+        varchar position "PM/DEV/TEST/DOC"
+    }
+
+    PERSONAL_SCORE {
+        bigint id PK
+        bigint user_id FK
+        bigint group_id FK
+        numeric group_total_score
+        numeric contribution_ratio "贡献系数"
+        numeric final_score "最终成绩"
+    }
+
+    ACHIEVEMENT_RESULT {
+        bigint id PK
+        bigint objective_id FK
+        bigint group_id FK
+        numeric achievement_value "达成度值"
+        varchar dimension
+    }

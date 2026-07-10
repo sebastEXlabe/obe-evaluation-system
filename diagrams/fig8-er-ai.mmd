@@ -1,0 +1,38 @@
+erDiagram
+    KNOWLEDGE_POINT ||--o{ QA_RECORD : 关联
+    SYS_USER ||--o{ QA_RECORD : 提问
+    SYS_USER ||--o{ SELF_TEST_RECORD : 自测
+    PROJECT_GROUP ||--o{ QUESTION_ANSWER : 问答
+
+    KNOWLEDGE_POINT {
+        bigint id PK
+        varchar title
+        varchar chapter
+        text content
+    }
+    QA_RECORD {
+        bigint id PK
+        bigint user_id FK
+        bigint knowledge_id FK
+        text question
+        text answer
+        boolean is_resolved
+        timestamp asked_at
+    }
+    SELF_TEST_RECORD {
+        bigint id PK
+        bigint user_id FK
+        numeric score
+        numeric total
+        timestamp taken_at
+    }
+    QUESTION_ANSWER {
+        bigint id PK
+        bigint group_id FK
+        bigint ask_user_id FK
+        bigint answer_user_id FK
+        varchar title
+        text question
+        text answer
+        varchar status
+    }

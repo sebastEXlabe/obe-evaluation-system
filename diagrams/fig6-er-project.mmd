@@ -1,0 +1,68 @@
+erDiagram
+    PROJECT_GROUP ||--o{ PROJECT_MILESTONE : 里程碑
+    PROJECT_MILESTONE ||--o{ PROJECT_TASK : 任务
+    PROJECT_GROUP ||--o{ PROJECT_JOURNAL : 日志
+    PROJECT_GROUP ||--o{ GIT_COMMIT_LOG : 提交
+    PROJECT_GROUP ||--o{ REPO_CONFIG : 仓库
+    PROJECT_GROUP ||--o{ REQUIREMENT_CHANGE : 变更
+    PROJECT_GROUP ||--o{ CONTRIBUTION_LOG : 贡献
+
+    PROJECT_MILESTONE {
+        bigint id PK
+        bigint group_id FK
+        varchar title
+        varchar cdio_phase
+        date due_date
+        boolean is_done
+    }
+    PROJECT_TASK {
+        bigint id PK
+        bigint group_id FK
+        bigint milestone_id FK
+        bigint assignee_id FK
+        varchar title
+        varchar status
+    }
+    PROJECT_JOURNAL {
+        bigint id PK
+        bigint user_id FK
+        bigint group_id FK
+        text content
+        date journal_date
+    }
+    GIT_COMMIT_LOG {
+        bigint id PK
+        bigint user_id FK
+        bigint group_id FK
+        varchar commit_hash
+        text message
+        int additions
+        int deletions
+        timestamp committed_at
+    }
+    REPO_CONFIG {
+        bigint id PK
+        bigint group_id FK
+        varchar platform
+        varchar owner
+        varchar repo
+        varchar branch
+        boolean enabled
+    }
+    REQUIREMENT_CHANGE {
+        bigint id PK
+        bigint group_id FK
+        varchar title
+        text description
+        varchar change_type
+        bigint created_by FK
+    }
+    CONTRIBUTION_LOG {
+        bigint id PK
+        bigint user_id FK
+        bigint group_id FK
+        varchar description
+        numeric bonus_score
+        boolean approved
+        bigint approved_by FK
+    }
