@@ -10,13 +10,12 @@
     <el-aside :width="sidebarCollapsed ? '64px' : '220px'" class="app-side" :class="{ collapsed: sidebarCollapsed }">
       <div class="side-header">
         <template v-if="!sidebarCollapsed">
-          <div class="side-sysname">基于AHP的OBE-CDIO</div>
-          <div style="font-size:10px;color:#8fa4be;text-align:center;margin-bottom:6px">软件工程课程评价系统</div>
+          <div class="side-sysname">基于AHP的OBE-CDIO软件工程课程评价系统</div>
           <div class="side-title">{{ roleLabels[role] }}</div>
           <div class="side-name">{{ user.realName || user.username }}</div>
         </template>
         <template v-else>
-          <div class="side-sysname" style="font-size:12px">A-O-C</div>
+          <div class="side-sysname" style="font-size:12px">AHP-OBE-CDIO</div>
         </template>
         <el-button class="collapse-btn" text @click="sidebarCollapsed = !sidebarCollapsed">
           <span v-if="sidebarCollapsed" style="font-size:18px;color:#bfcbd9">&#9776;</span>
@@ -122,7 +121,7 @@ function doLogout() {
 .collapsed .collapse-btn { position: static; transform: none; margin: 0 auto; display: block; }
 .side-title { font-size: 14px; }
 .side-name { font-size: 12px; color: #909399; margin-top: 4px; }
-.side-sysname { font-size: 14px; font-weight: bold; color: #409EFF; letter-spacing: 1px; }
+.side-sysname { font-size: 13px; font-weight: bold; color: #409EFF; text-align: center; word-break: keep-all; }
 .app-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #dcdfe6; background: #fff; }
 .app-main { background: #f0f2f5; min-height: calc(100vh - 60px); }
 </style>
