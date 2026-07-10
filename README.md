@@ -11,7 +11,12 @@ cp .env.example .env
 # 编辑 .env 填入 DEEPSEEK_API_KEY
 docker compose up -d --build
 # 访问 http://localhost （admin / admin123）
+
+# 注入演示数据（可选）
+pip install psycopg2-binary bcrypt
+python inject_demo_data.py
 ```
+演示账号：admin/admin123, teacher1/teacher123, student1~4/student123
 
 ## 功能模块
 
