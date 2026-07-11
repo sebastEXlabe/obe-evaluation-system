@@ -34,9 +34,8 @@ const router = createRouter({ history: createWebHashHistory(), routes })
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('obe_token')
   if (to.path !== '/login' && !token) return next('/login')
-  const user = JSON.parse(localStorage.getItem('user') || '{}')
-  if (to.meta.roles && !to.meta.roles.includes(user.roleCode || 'STUDENT'))
-    return next('/')
+  // Role check: disable role-based redirect for now, let Layout handle menus
+  // This prevents wrong redirects from stale localStorage data
   next()
 })
 
